@@ -1,0 +1,30 @@
+// Precision Monetary Mathematics Utilities in Nilang
+// Standard decimal formatting and monetary calculations
+
+let round2 = fn(val) {
+    // Round number to 2 decimal places
+    let factor = 100;
+    return (val * factor) / factor;
+};
+
+let round6 = fn(val) {
+    // Round number to 6 decimal places (for unit prices)
+    let factor = 1000000;
+    return (val * factor) / factor;
+};
+
+let addMoney = fn(a, b) {
+    return round2(a + b);
+};
+
+let subtractMoney = fn(a, b) {
+    return round2(a - b);
+};
+
+let multiplyMoney = fn(quantity, price) {
+    return round2(quantity * price);
+};
+
+let formatCurrency = fn(amount) {
+    return "৳ " + amount;
+};

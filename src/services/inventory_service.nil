@@ -1,0 +1,40 @@
+// Inventory & Catalog Service in Nilang
+
+let createCatalogStore = fn() {
+    return {
+        "categories": [
+            {"id": "cat_1", "name": "Beverages", "description": "Soft drinks & water"},
+            {"id": "cat_2", "name": "Groceries", "description": "Daily grocery items"},
+            {"id": "cat_3", "name": "Electronics", "description": "Gadgets & accessories"}
+        ],
+        "products": [
+            {"id": "prod_1", "barcode": "8901001", "name": "Mineral Water 1L", "categoryId": "cat_1", "sellingPrice": 20, "costPrice": 12, "stock": 50, "minStockAlert": 10},
+            {"id": "prod_2", "barcode": "8901002", "name": "Basmati Rice 1kg", "categoryId": "cat_2", "sellingPrice": 120, "costPrice": 95, "stock": 30, "minStockAlert": 5},
+            {"id": "prod_3", "barcode": "8901003", "name": "USB Cable Type-C", "categoryId": "cat_3", "sellingPrice": 250, "costPrice": 150, "stock": 15, "minStockAlert": 3}
+        ]
+    };
+};
+
+let findProductByBarcode = fn(products, barcode) {
+    let i = 0;
+    while (i < len(products)) {
+        let p = products[i];
+        if (p["barcode"] == barcode) {
+            return p;
+        }
+        i = i + 1;
+    }
+    return null;
+};
+
+let findProductById = fn(products, id) {
+    let i = 0;
+    while (i < len(products)) {
+        let p = products[i];
+        if (p["id"] == id) {
+            return p;
+        }
+        i = i + 1;
+    }
+    return null;
+};

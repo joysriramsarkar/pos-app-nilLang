@@ -1,0 +1,23 @@
+// Customer & Supplier Data Models in Nilang
+
+let createCustomer = fn(id, name, phone, email, dueBalance, prepaidBalance) {
+    return {
+        "id": id,
+        "name": name,
+        "phone": phone,
+        "email": email,
+        "dueBalance": dueBalance,
+        "prepaidBalance": prepaidBalance
+    };
+};
+
+let createSupplier = fn(id, name, contactPerson, phone, email, address) {
+    return {
+        "id": id,
+        "name": name,
+        "contactPerson": contactPerson,
+        "phone": phone,
+        "email": email,
+        "address": address
+    };
+};

@@ -1,0 +1,36 @@
+// Authentication & User Management Service in Nilang
+
+let createInitialUsers = fn() {
+    return [
+        {
+            "id": "usr_1",
+            "username": "admin",
+            "name": "System Admin",
+            "role": "ADMIN",
+            "permissions": [
+                "POS_ACCESS", "MANAGE_PRODUCTS", "MANAGE_CATEGORIES",
+                "MANAGE_CUSTOMERS", "MANAGE_SUPPLIERS", "MANAGE_SALES",
+                "MANAGE_EXPENSES", "MANAGE_USERS", "VIEW_REPORTS"
+            ]
+        },
+        {
+            "id": "usr_2",
+            "username": "cashier",
+            "name": "POS Cashier",
+            "role": "CASHIER",
+            "permissions": ["POS_ACCESS", "MANAGE_CUSTOMERS", "MANAGE_SALES"]
+        }
+    ];
+};
+
+let authenticateUser = fn(users, username, password) {
+    let i = 0;
+    while (i < len(users)) {
+        let u = users[i];
+        if (u["username"] == username) {
+            return u;
+        }
+        i = i + 1;
+    }
+    return null;
+};

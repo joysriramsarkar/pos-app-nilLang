@@ -1,0 +1,47 @@
+// User & Permissions Data Models in Nilang
+// Defines User entity, roles, and capability records
+
+let createUser = fn(id, username, name, role, permissions) {
+    return {
+        "id": id,
+        "username": username,
+        "name": name,
+        "role": role,
+        "permissions": permissions,
+        "active": true
+    };
+};
+
+let createRolePermissions = fn(role) {
+    if (role == "ADMIN") {
+        return [
+            "POS_ACCESS",
+            "MANAGE_PRODUCTS",
+            "MANAGE_CATEGORIES",
+            "MANAGE_CUSTOMERS",
+            "MANAGE_SUPPLIERS",
+            "MANAGE_SALES",
+            "MANAGE_EXPENSES",
+            "MANAGE_USERS",
+            "VIEW_REPORTS"
+        ];
+    }
+    if (role == "MANAGER") {
+        return [
+            "POS_ACCESS",
+            "MANAGE_PRODUCTS",
+            "MANAGE_CATEGORIES",
+            "MANAGE_CUSTOMERS",
+            "MANAGE_SUPPLIERS",
+            "MANAGE_SALES",
+            "MANAGE_EXPENSES",
+            "VIEW_REPORTS"
+        ];
+    }
+    // Default CASHIER permissions
+    return [
+        "POS_ACCESS",
+        "MANAGE_CUSTOMERS",
+        "MANAGE_SALES"
+    ];
+};

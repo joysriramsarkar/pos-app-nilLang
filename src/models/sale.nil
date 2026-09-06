@@ -1,0 +1,53 @@
+// Sale, SaleItem, Expense, and PurchaseOrder Data Models in Nilang
+
+let createSaleItem = fn(productId, productName, unitPrice, costPrice, quantity, totalPrice) {
+    return {
+        "productId": productId,
+        "productName": productName,
+        "unitPrice": unitPrice,
+        "costPrice": costPrice,
+        "quantity": quantity,
+        "totalPrice": totalPrice
+    };
+};
+
+let createSale = fn(id, invoiceNo, customerId, items, subtotal, discount, tax, grandTotal, paymentMethod, paidAmount, dueAmount, userId, createdAt) {
+    return {
+        "id": id,
+        "invoiceNo": invoiceNo,
+        "customerId": customerId,
+        "items": items,
+        "subtotal": subtotal,
+        "discount": discount,
+        "tax": tax,
+        "grandTotal": grandTotal,
+        "paymentMethod": paymentMethod, // CASH, UPI, MIXED, PREPAID
+        "paidAmount": paidAmount,
+        "dueAmount": dueAmount,
+        "userId": userId,
+        "createdAt": createdAt
+    };
+};
+
+let createExpense = fn(id, category, amount, description, date, userId) {
+    return {
+        "id": id,
+        "category": category,
+        "amount": amount,
+        "description": description,
+        "date": date,
+        "userId": userId
+    };
+};
+
+let createPurchaseOrder = fn(id, poNumber, supplierId, items, status, totalCost, createdAt) {
+    return {
+        "id": id,
+        "poNumber": poNumber,
+        "supplierId": supplierId,
+        "items": items,
+        "status": status, // PENDING, RECEIVED, CANCELLED
+        "totalCost": totalCost,
+        "createdAt": createdAt
+    };
+};

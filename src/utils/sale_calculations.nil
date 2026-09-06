@@ -1,0 +1,58 @@
+// Sale Calculations and Price Validation in Nilang
+
+let aggregateSaleItemQuantities = fn(items) {
+    let totals = {};
+    let i = 0;
+    while (i < len(items)) {
+        let item = items[i];
+        let pId = item["productId"];
+        let currentQty = totals[pId];
+        if (currentQty != null) {
+            totals[pId] = currentQty + item["quantity"];
+        } else {
+            totals[pId] = item["quantity"];
+        }
+        i = i + 1;
+    }
+    return totals;
+};
+
+let validateSaleTotals = fn(items, subtotal, discount, tax, grandTotal) {
+    let computedSubtotal = 0;
+    let i = 0;
+    while (i < len(items)) {
+        let item = items[i];
+        let expectedItemTotal = item["quantity"] * item["unitPrice"];
+        if (item["totalPrice"] != expectedItemTotal) {
+            return "Total mismatch for item: " + item["productName"];
+        }
+        computedSubtotal = computedSubtotal + expectedItemTotal;
+        i = i + 1;
+    }
+
+    if (subtotal != computedSubtotal) {
+        return "Subtotal mismatch";
+    }
+
+    let computedGrandTotal = (subtotal - discount) + tax;
+    if (grandTotal != computedGrandTotal) {
+        return "Grand total mismatch";
+    }
+
+    return null; // Valid
+};
+
+let calculateProfitForSale = fn(items, discount) {
+    let totalRevenue = 0;
+    let totalCost = 0;
+    let i = 0;
+    while (i < len(items)) {
+        let item = items[i];
+        totalRevenue = totalRevenue + item["totalPrice"];
+        totalCost = totalCost + (item["quantity"] * item["costPrice"]);
+        i = i + 1;
+    }
+    let netRevenue = totalRevenue - discount;
+    let profit = netRevenue - totalCost;
+    return profit;
+};

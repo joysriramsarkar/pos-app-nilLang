@@ -1,0 +1,26 @@
+// Product & Category Data Models in Nilang
+
+let createCategory = fn(id, name, description) {
+    return {
+        "id": id,
+        "name": name,
+        "description": description
+    };
+};
+
+let createProduct = fn(id, barcode, name, categoryId, sellingPrice, costPrice, stock, minStockAlert) {
+    return {
+        "id": id,
+        "barcode": barcode,
+        "name": name,
+        "categoryId": categoryId,
+        "sellingPrice": sellingPrice,
+        "costPrice": costPrice,
+        "stock": stock,
+        "minStockAlert": minStockAlert
+    };
+};
+
+let isLowStock = fn(product) {
+    return product["stock"] <= product["minStockAlert"];
+};

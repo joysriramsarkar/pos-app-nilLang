@@ -1,0 +1,148 @@
+// Point of Sale (POS) Main Application in Nilang (নীলাং) & Alap Framework
+
+puts("╔═════════════════════════════════════════════════════════════════╗");
+puts("║   🛒 Nilang POS Application (নীলাং পিওএস পয়েন্ট অফ সেল অ্যাপ)    ║");
+puts("║   Powered by Alap Framework & Onuron OS                         ║");
+puts("╚═════════════════════════════════════════════════════════════════╝");
+
+// ─── 1. Load Services & Data Models ───────────────────────────────────────────
+puts("\n📌 1. Initializing System Stores and Models...");
+
+let users = [
+    {
+        "id": "usr_1",
+        "username": "admin",
+        "name": "System Admin",
+        "role": "ADMIN",
+        "permissions": ["POS_ACCESS", "MANAGE_PRODUCTS", "MANAGE_CUSTOMERS", "MANAGE_SALES", "VIEW_REPORTS"]
+    },
+    {
+        "id": "usr_2",
+        "username": "cashier",
+        "name": "Kamal Ahmed (Cashier)",
+        "role": "CASHIER",
+        "permissions": ["POS_ACCESS", "MANAGE_SALES"]
+    }
+];
+
+let catalog = [
+    {"id": "prod_1", "barcode": "8901001", "name": "Mineral Water 1L", "sellingPrice": 20, "costPrice": 12, "stock": 50, "minStockAlert": 10},
+    {"id": "prod_2", "barcode": "8901002", "name": "Basmati Rice 1kg", "sellingPrice": 120, "costPrice": 95, "stock": 30, "minStockAlert": 5},
+    {"id": "prod_3", "barcode": "8901003", "name": "USB Cable Type-C", "sellingPrice": 250, "costPrice": 150, "stock": 15, "minStockAlert": 3}
+];
+
+let customers = [
+    {"id": "cust_1", "name": "General Customer", "phone": "0000000000", "dueBalance": 0, "prepaidBalance": 0},
+    {"id": "cust_2", "name": "Rahim Ahmed", "phone": "01711111111", "dueBalance": 150, "prepaidBalance": 500}
+];
+
+puts("  • Users Loaded: " + len(users));
+puts("  • Catalog Products Loaded: " + len(catalog));
+puts("  • Customers Loaded: " + len(customers));
+
+// ─── 2. Authentication & Permission Verification ────────────────────────────
+puts("\n🔐 2. Authenticating User...");
+let currentUser = users[1]; // Logged in as Cashier
+puts("  ➜ Logged in User: " + currentUser["name"] + " (Role: " + currentUser["role"] + ")");
+
+let checkPermission = fn(user, perm) {
+    let perms = user["permissions"];
+    let i = 0;
+    while (i < len(perms)) {
+        if (perms[i] == perm) {
+            return true;
+        }
+        let i = i + 1;
+    }
+    return false;
+};
+
+if (checkPermission(currentUser, "POS_ACCESS")) {
+    puts("  ✅ Access Granted to POS Billing System!");
+} else {
+    puts("  ❌ Access Denied!");
+}
+
+// ─── 3. POS Billing & Cart Calculations ─────────────────────────────────────
+puts("\n🛍️ 3. Creating Cart & Processing Transaction...");
+
+let item1 = catalog[0]; // Mineral Water
+let item2 = catalog[1]; // Basmati Rice
+
+let qty1 = 3; // 3 x 20 = 60
+let qty2 = 2; // 2 x 120 = 240
+
+let item1Total = qty1 * item1["sellingPrice"];
+let item2Total = qty2 * item2["sellingPrice"];
+
+let cartItems = [
+    {
+        "productId": item1["id"],
+        "productName": item1["name"],
+        "unitPrice": item1["sellingPrice"],
+        "costPrice": item1["costPrice"],
+        "quantity": qty1,
+        "totalPrice": item1Total
+    },
+    {
+        "productId": item2["id"],
+        "productName": item2["name"],
+        "unitPrice": item2["sellingPrice"],
+        "costPrice": item2["costPrice"],
+        "quantity": qty2,
+        "totalPrice": item2Total
+    }
+];
+
+let subtotal = item1Total + item2Total; // 300
+let discount = 20; // 20 Taka Discount
+let tax = 14; // 5% VAT approx = 14
+let grandTotal = (subtotal - discount) + tax; // 294
+
+puts("  • Items in Cart:");
+puts("    - " + item1["name"] + " x " + qty1 + " = ৳ " + item1Total);
+puts("    - " + item2["name"] + " x " + qty2 + " = ৳ " + item2Total);
+puts("  • Subtotal:    ৳ " + subtotal);
+puts("  • Discount:   -৳ " + discount);
+puts("  • Tax / VAT:   +৳ " + tax);
+puts("  ─────────────────────────────────────");
+puts("  • Grand Total:  ৳ " + grandTotal);
+
+// ─── 4. Stock Deduction & Invoice Generation ─────────────────────────────────
+puts("\n⚡ 4. Deducting Stock & Finalizing Sale...");
+
+let item1NewStock = item1["stock"] - qty1;
+let item2NewStock = item2["stock"] - qty2;
+
+let invoice = {
+    "invoiceNo": "INV-2026-0001",
+    "customer": customers[1]["name"],
+    "items": cartItems,
+    "grandTotal": grandTotal,
+    "paymentMethod": "CASH",
+    "paidAmount": 300,
+    "change": 6,
+    "cashier": currentUser["name"]
+};
+
+puts("  🧾 Invoice Generated: " + invoice["invoiceNo"]);
+puts("  • Customer:     " + invoice["customer"]);
+puts("  • Payment Mode: " + invoice["paymentMethod"]);
+puts("  • Paid Amount:  ৳ " + invoice["paidAmount"]);
+puts("  • Change Return:৳ " + invoice["change"]);
+
+puts("\n📦 Updated Stock Status:");
+puts("  • " + item1["name"] + ": Remaining Stock = " + item1NewStock);
+puts("  • " + item2["name"] + ": Remaining Stock = " + item2NewStock);
+
+// ─── 5. Analytics & Profit Summary ──────────────────────────────────────────
+puts("\n📊 5. Profit & Analytics Calculation...");
+let totalCost = (qty1 * item1["costPrice"]) + (qty2 * item2["costPrice"]); // (3*12) + (2*95) = 36 + 190 = 226
+let netRevenue = subtotal - discount; // 300 - 20 = 280
+let netProfit = netRevenue - totalCost; // 280 - 226 = 54
+
+puts("  • Gross Sales: ৳ " + subtotal);
+puts("  • Total Cost:  ৳ " + totalCost);
+puts("  • Net Profit:  ৳ " + netProfit);
+
+puts("\n🎉 Nilang POS Application execution completed successfully!");

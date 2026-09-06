@@ -1,0 +1,29 @@
+// Stock Management Utilities in Nilang
+
+let deductProductStock = fn(product, quantityToDeduct) {
+    let newStock = product["stock"] - quantityToDeduct;
+    return {
+        "id": product["id"],
+        "barcode": product["barcode"],
+        "name": product["name"],
+        "categoryId": product["categoryId"],
+        "sellingPrice": product["sellingPrice"],
+        "costPrice": product["costPrice"],
+        "stock": newStock,
+        "minStockAlert": product["minStockAlert"]
+    };
+};
+
+let addProductStock = fn(product, quantityToAdd) {
+    let newStock = product["stock"] + quantityToAdd;
+    return {
+        "id": product["id"],
+        "barcode": product["barcode"],
+        "name": product["name"],
+        "categoryId": product["categoryId"],
+        "sellingPrice": product["sellingPrice"],
+        "costPrice": product["costPrice"],
+        "stock": newStock,
+        "minStockAlert": product["minStockAlert"]
+    };
+};

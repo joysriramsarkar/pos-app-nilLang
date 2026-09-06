@@ -1,0 +1,57 @@
+// POS Checkout & Sales Transaction Service in Nilang
+
+let createSalesStore = fn() {
+    return {
+        "sales": [],
+        "expenses": [
+            {"id": "exp_1", "category": "Utilities", "amount": 1500, "description": "Electricity Bill", "date": "2026-09-01", "userId": "usr_1"}
+        ],
+        "purchaseOrders": []
+    };
+};
+
+let processSaleCheckout = fn(salesStore, catalogProducts, saleData) {
+    let items = saleData["items"];
+
+    // 1. Validate stock availability
+    let i = 0;
+    while (i < len(items)) {
+        let item = items[i];
+        let pId = item["productId"];
+        let prod = null;
+        let j = 0;
+        while (j < len(catalogProducts)) {
+            if (catalogProducts[j]["id"] == pId) {
+                prod = catalogProducts[j];
+            }
+            j = j + 1;
+        }
+        if (prod != null) {
+            if (prod["stock"] < item["quantity"]) {
+                return {"success": false, "message": "Insufficient stock for " + prod["name"]};
+            }
+        }
+        i = i + 1;
+    }
+
+    // 2. Deduct stock
+    let k = 0;
+    while (k < len(items)) {
+        let item = items[k];
+        let pId = item["productId"];
+        let m = 0;
+        while (m < len(catalogProducts)) {
+            if (catalogProducts[m]["id"] == pId) {
+                catalogProducts[m]["stock"] = catalogProducts[m]["stock"] - item["quantity"];
+            }
+            m = m + 1;
+        }
+        k = k + 1;
+    }
+
+    return {
+        "success": true,
+        "sale": saleData,
+        "message": "Sale processed successfully!"
+    };
+};

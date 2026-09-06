@@ -1,0 +1,33 @@
+{
+  "name": "pos-app",
+  "version": "1.0.0",
+  "author": "Joysriram Sarkar",
+  "description": "Point of Sale (POS) Application written in Nilang (নীলাং) & Alap Framework",
+  "entry": "src/main.nil",
+  "profile": "web",
+  "capabilities": [
+    "Network",
+    "Crypto",
+    "Database"
+  ],
+  "targets": [
+    "wasm",
+    "web",
+    "onuron",
+    "linux"
+  ],
+  "dependencies": {
+    "alap/ui": "^0.2.0",
+    "alap/web": "^0.2.0",
+    "alap/db": "^0.2.0"
+  },
+  "build": {
+    "output_dir": "build",
+    "optimize": true,
+    "debug": false
+  },
+  "scripts": {
+    "start": "nil run",
+    "build": "nil build"
+  }
+}

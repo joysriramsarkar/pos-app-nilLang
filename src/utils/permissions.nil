@@ -1,0 +1,27 @@
+// User Permissions Utilities in Nilang
+
+let hasPermission = fn(userPermissions, requiredPermission) {
+    if (userPermissions == null) {
+        return false;
+    }
+    let i = 0;
+    while (i < len(userPermissions)) {
+        if (userPermissions[i] == requiredPermission) {
+            return true;
+        }
+        i = i + 1;
+    }
+    return false;
+};
+
+let canAccessPOS = fn(user) {
+    return hasPermission(user["permissions"], "POS_ACCESS");
+};
+
+let canManageUsers = fn(user) {
+    return hasPermission(user["permissions"], "MANAGE_USERS");
+};
+
+let canViewReports = fn(user) {
+    return hasPermission(user["permissions"], "VIEW_REPORTS");
+};

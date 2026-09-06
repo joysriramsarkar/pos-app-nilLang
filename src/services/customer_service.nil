@@ -1,0 +1,25 @@
+// Customer & Supplier Service in Nilang
+
+let createCustomerStore = fn() {
+    return {
+        "customers": [
+            {"id": "cust_1", "name": "General Customer", "phone": "0000000000", "email": "general@pos.com", "dueBalance": 0, "prepaidBalance": 0},
+            {"id": "cust_2", "name": "Rahim Ahmed", "phone": "01711111111", "email": "rahim@example.com", "dueBalance": 500, "prepaidBalance": 200}
+        ],
+        "suppliers": [
+            {"id": "supp_1", "name": "ABC Beverage Distributor", "contactPerson": "Kamal", "phone": "01822222222", "email": "supply@abc.com", "address": "Dhaka"}
+        ]
+    };
+};
+
+let findCustomerById = fn(customers, id) {
+    let i = 0;
+    while (i < len(customers)) {
+        let c = customers[i];
+        if (c["id"] == id) {
+            return c;
+        }
+        i = i + 1;
+    }
+    return null;
+};
