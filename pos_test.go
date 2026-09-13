@@ -38,6 +38,7 @@ func setupTestApp() *server.Service {
 	srv.GET("/api/catalog", handleCatalog)
 	srv.GET("/api/products", handleCatalog)
 	srv.GET("/api/customers", handleCustomers)
+	srv.POST("/api/customers", handleAddCustomer)
 	srv.GET("/api/ledger/:id", handleCustomerLedger)
 	srv.POST("/api/customers/due-payment", handleCustomerDuePayment)
 	srv.GET("/api/cart", handleGetCart)
@@ -111,23 +112,26 @@ func TestCheckoutAtomicTransaction(t *testing.T) {
 	// Cart with:
 	// 1x Miniket Rice (p-01): ৳3,400.00 (340000)
 	// 2x Fresh Atta (p-10): 2 x ৳125.00 = ৳250.00 (25000)
-	// Subtotal = ৳3,650.00 (365000)
-	// Discount = ৳50.00 (5000)
-	// After Discount = ৳3,600.00 (360000)
-	// 5% Tax = ৳180.00 (18000)
-	// Grand Total = ৳3,780.00 (378000)
+	// Cart with:
+	// 1x Anmol Marie (p-01): ৳30.00 (3000)
+	// 2x Nutri Choice (p-02): 2 x ৳50.00 = ৳100.00 (10000)
+	// Subtotal = ৳130.00 (13000)
+	// Discount = ৳10.00 (1000)
+	// After Discount = ৳120.00 (12000)
+	// 5% Tax = ৳6.00 (600)
+	// Grand Total = ৳126.00 (12600)
 	checkoutPayload := CheckoutRequest{
 		CustomerID:  "c-02", // Karim Bhai with ৳500.00 prepaid
 		CashierName: "Joy Sarkar",
 		Items: []CheckoutItem{
 			{ProductID: "p-01", Qty: 1},
-			{ProductID: "p-10", Qty: 2},
+			{ProductID: "p-02", Qty: 2},
 		},
-		DiscountMinor: 5000,
+		DiscountMinor: 1000,
 		Payment: PaymentBreakdown{
-			CashMinor:    350000, // ৳3,500.00 cash
+			CashMinor:    10000, // ৳100.00 cash
 			UpiMinor:     0,
-			PrepaidMinor: 30000,  // ৳300.00 from prepaid
+			PrepaidMinor: 3000,  // ৳30.00 from prepaid
 			DueMinor:     0,
 		},
 	}
@@ -151,24 +155,24 @@ func TestCheckoutAtomicTransaction(t *testing.T) {
 		t.Fatalf("expected ok=true, got %v", res["ok"])
 	}
 
-	// Total tendered = 350000 + 30000 = 380000
-	// Grand = 378000
-	// Change = 2000 (৳20.00)
+	// Total tendered = 10000 + 3000 = 13000
+	// Grand = 12600
+	// Change = 400 (৳4.00)
 	changeMinor := int64(res["changeMinor"].(float64))
-	if changeMinor != 2000 {
-		t.Fatalf("expected change minor 2000, got %d", changeMinor)
+	if changeMinor != 400 {
+		t.Fatalf("expected change minor 400, got %d", changeMinor)
 	}
 
-	// Verify customer's prepaid balance decreased by 30000 (50000 - 30000 = 20000)
+	// Verify customer's prepaid balance decreased by 3000 (50000 - 3000 = 47000)
 	prepaidAfter := int64(res["prepaidAfter"].(float64))
-	if prepaidAfter != 20000 {
-		t.Fatalf("expected prepaidAfter 20000, got %d", prepaidAfter)
+	if prepaidAfter != 47000 {
+		t.Fatalf("expected prepaidAfter 47000, got %d", prepaidAfter)
 	}
 
-	// Verify stock of p-01 decreased by 1 (45 - 1 = 44)
+	// Verify stock of p-01 decreased by 1 (53 - 1 = 52)
 	prod, _ := data.Table("products").Where("id", "=", "p-01").First(state.pool)
-	if prod["stock"].(int64) != 44 {
-		t.Fatalf("expected stock 44, got %v", prod["stock"])
+	if prod["stock"].(int64) != 52 {
+		t.Fatalf("expected stock 52, got %v", prod["stock"])
 	}
 
 	// Verify Receipt text was generated
@@ -229,8 +233,8 @@ func TestRefundEndpoint(t *testing.T) {
 
 	// Verify stock of p-01 increased back (+1)
 	prod, _ := data.Table("products").Where("id", "=", "p-01").First(state.pool)
-	if prod["stock"].(int64) != 46 { // 45 + 1 = 46
-		t.Fatalf("expected stock 46, got %v", prod["stock"])
+	if prod["stock"].(int64) != 54 { // 53 + 1 = 54
+		t.Fatalf("expected stock 54, got %v", prod["stock"])
 	}
 }
 
@@ -384,5 +388,39 @@ func TestAlapRuntimeEndpoint(t *testing.T) {
 	body := rec.Body.String()
 	if !strings.Contains(body, "Alap Reactive Client Runtime") {
 		t.Fatalf("expected alap-runtime.js to contain runtime signature")
+	}
+}
+
+func TestAddCustomer(t *testing.T) {
+	srv := setupTestApp()
+
+	payload := map[string]interface{}{
+		"name":             "Test Customer",
+		"nameBn":           "টেস্ট গ্রাহক",
+		"phone":            "01999-888777",
+		"creditLimitMinor": 5000000,
+		"dueMinor":         0,
+		"prepaidMinor":     0,
+	}
+	bodyBytes, _ := json.Marshal(payload)
+	req := httptest.NewRequest("POST", "/api/customers", bytes.NewBuffer(bodyBytes))
+	req.Header.Set("Content-Type", "application/json")
+	rec := httptest.NewRecorder()
+	srv.ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusOK {
+		t.Fatalf("expected status 200, got %d: %s", rec.Code, rec.Body.String())
+	}
+
+	var resp map[string]interface{}
+	if err := json.NewDecoder(rec.Body).Decode(&resp); err != nil {
+		t.Fatalf("failed to decode response: %v", err)
+	}
+	if ok, _ := resp["ok"].(bool); !ok {
+		t.Fatalf("expected ok true, got false")
+	}
+	cust, _ := resp["customer"].(map[string]interface{})
+	if cust["nameBn"] != "টেস্ট গ্রাহক" {
+		t.Fatalf("expected customer nameBn 'টেস্ট গ্রাহক', got %v", cust["nameBn"])
 	}
 }

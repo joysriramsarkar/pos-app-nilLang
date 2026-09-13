@@ -1,0 +1,15 @@
+# Environment & Secrets (NEVER COMMIT .env TO GIT)
+.env
+.env.local
+.env.*.local
+
+# Binaries & executables
+*.exe
+*.exe~
+pos-app.exe
+pos-server.exe
+
+# OS & Temp files
+.DS_Store
+Thumbs.db
+*.tmp

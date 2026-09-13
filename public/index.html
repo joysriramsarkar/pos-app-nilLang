@@ -12,7 +12,7 @@
 <body class="pos-app-body">
 
   <!-- ─── 1. LEFT SIDEBAR NAVIGATION ─── -->
-  <nav class="pos-sidebar" id="posSidebar">
+  <nav class="pos-sidebar" id="posSidebar" data-alap-component="Header">
     <!-- Brand Header -->
     <div class="sidebar-brand">
       <div class="sidebar-brand-logo">🏪</div>
@@ -38,7 +38,7 @@
       <li class="nav-item" data-view="stock" onclick="showView('stock')">
         <span class="nav-icon">📦</span><span>স্টক</span>
       </li>
-      <li class="nav-item" data-view="suppliers" onclick="showView('suppliers')">
+      <li class="nav-item" data-view="parties" onclick="showView('parties')">
         <span class="nav-icon">👥</span><span>পার্টিজের নাম</span>
       </li>
       <li class="nav-item" data-view="due-settlement" onclick="showView('due-settlement')">
@@ -334,67 +334,181 @@
       </div>
     </section>
 
-    <!-- ════════════════════ VIEW: PARTIES (SUPPLIERS & CUSTOMERS) ════════════════════ -->
-    <section class="app-view" id="view-suppliers">
+    <!-- ════════════════════ VIEW: PARTIES (WITH SUB-TABS) ════════════════════ -->
+    <section class="app-view" id="view-parties">
       <div class="view-content">
         <div class="view-page-header">
-          <h2>👥 পার্টিজের নাম (গ্রাহক ও সরবরাহকারী)</h2>
+          <div>
+            <h2>👥 পার্টিজের নাম (গ্রাহক ও সরবরাহকারী)</h2>
+            <p class="view-page-subtitle">গ্রাহক এবং সরবরাহকারীদের তথ্য, বাকি ও লেনদেন অ্যাকাউন্ট</p>
+          </div>
           <div style="display:flex;gap:8px">
-            <button class="btn btn-secondary" onclick="openAddCustomerModal()">+ নতুন গ্রাহক</button>
-            <button class="btn btn-primary" onclick="document.getElementById('addSupplierForm').style.display='block'">+ নতুন সরবরাহকারী</button>
+            <button class="btn btn-secondary" onclick="showView('due-settlement')">₹ বাকি খাতা</button>
+            <button class="btn btn-outline" onclick="loadPartiesView()">🔄 রিফ্রেশ</button>
           </div>
         </div>
 
-        <!-- Add Supplier Form -->
-        <div class="stock-adjust-form-panel" id="addSupplierForm" style="display:none">
-          <h4>➕ নতুন সরবরাহকারী / পার্টি যোগ করুন</h4>
-          <div class="form-grid">
-            <div class="form-group">
-              <label>নাম (English):</label>
-              <input type="text" id="newSupplierName" class="form-input" placeholder="Supplier Name">
+        <!-- Sub-Tabs Switcher (ট্যাব বাটনসমূহ) -->
+        <div class="parties-nav-tabs" style="display:flex;gap:8px;border-bottom:2px solid rgba(255,255,255,0.08);margin-bottom:20px;padding-bottom:2px">
+          <button class="party-tab-btn active" id="tabBtnCustomers" onclick="switchPartyTab('customers')" style="background:none;border:none;color:var(--brand-cyan);font-size:15px;font-weight:700;padding:10px 20px;cursor:pointer;border-bottom:3px solid var(--brand-cyan);display:flex;align-items:center;gap:8px">
+            <span>👤</span><span>নিবন্ধিত গ্রাহক (Customers)</span>
+          </button>
+          <button class="party-tab-btn" id="tabBtnSuppliers" onclick="switchPartyTab('suppliers')" style="background:none;border:none;color:var(--text-muted);font-size:15px;font-weight:600;padding:10px 20px;cursor:pointer;border-bottom:3px solid transparent;display:flex;align-items:center;gap:8px">
+            <span>🏢</span><span>সরবরাহকারী / মহাজন (Suppliers)</span>
+          </button>
+        </div>
+
+        <!-- ── SUB-TAB 1: CUSTOMERS CONTENT ── -->
+        <div id="partyTabCustomersContent" class="party-tab-content">
+          <!-- 3 KPI Cards for Customers -->
+          <div class="stats-grid" style="grid-template-columns: repeat(3, 1fr); margin-bottom: 20px;">
+            <div class="stat-card">
+              <span class="stat-lbl">মোট নিবন্ধিত গ্রাহক</span>
+              <strong class="stat-val" id="cust-total-count" style="color:var(--brand-cyan)">—</strong>
             </div>
-            <div class="form-group">
-              <label>নাম (বাংলা):</label>
-              <input type="text" id="newSupplierNameBn" class="form-input" placeholder="সরবরাহকারীর নাম">
+            <div class="stat-card">
+              <span class="stat-lbl">মোট বকেয়া পাওনা (Due)</span>
+              <strong class="stat-val" id="cust-total-due" style="color:#ef4444">—</strong>
             </div>
-            <div class="form-group">
-              <label>ফোন নম্বর:</label>
-              <input type="text" id="newSupplierPhone" class="form-input" placeholder="01xxx-xxxxxx">
-            </div>
-            <div class="form-group">
-              <label>ঠিকানা:</label>
-              <input type="text" id="newSupplierAddress" class="form-input" placeholder="শহর, জেলা">
+            <div class="stat-card">
+              <span class="stat-lbl">মোট অগ্রিম জমা (Prepaid)</span>
+              <strong class="stat-val" id="cust-total-prepaid" style="color:#10b981">—</strong>
             </div>
           </div>
-          <div style="display:flex;gap:8px;margin-top:12px">
-            <button class="btn btn-primary" onclick="addSupplier()">✅ সংরক্ষণ করুন</button>
-            <button class="btn btn-secondary" onclick="document.getElementById('addSupplierForm').style.display='none'">বাতিল</button>
+
+          <!-- Add Customer Inline Form -->
+          <div class="stock-adjust-form-panel" id="addCustomerFormPanel" style="display:none;margin-bottom:20px">
+            <h4>➕ নতুন গ্রাহক নিবন্ধন করুন</h4>
+            <div class="form-grid">
+              <div class="form-group">
+                <label>নাম (English):</label>
+                <input type="text" id="newCustName" class="form-input" placeholder="Customer Name (e.g. Rahim Khan)">
+              </div>
+              <div class="form-group">
+                <label>নাম (বাংলা):</label>
+                <input type="text" id="newCustNameBn" class="form-input" placeholder="গ্রাহকের নাম (যেমন: রহিম খান)">
+              </div>
+              <div class="form-group">
+                <label>মোবাইল / ফোন:</label>
+                <input type="text" id="newCustPhone" class="form-input" placeholder="017xx-xxxxxx">
+              </div>
+              <div class="form-group">
+                <label>ক্রেডিট লিমিট (টাকা):</label>
+                <input type="number" id="newCustCreditLimit" class="form-input" placeholder="25000" value="25000">
+              </div>
+              <div class="form-group">
+                <label>প্রাথমিক বকেয়া (যদি থাকে):</label>
+                <input type="number" id="newCustInitialDue" class="form-input" placeholder="0" value="0">
+              </div>
+            </div>
+            <div style="display:flex;gap:8px;margin-top:12px">
+              <button class="btn btn-primary" onclick="saveNewCustomer()">✅ সংরক্ষণ করুন</button>
+              <button class="btn btn-secondary" onclick="closeAddCustomerModal()">বাতিল</button>
+            </div>
+          </div>
+
+          <!-- Search & Action Bar -->
+          <div style="margin-bottom: 16px; display: flex; justify-content: space-between; gap: 12px;">
+            <input type="text" id="customerSearchInput" class="form-input" placeholder="🔍 গ্রাহকের নাম বা ফোন নম্বর দিয়ে খুঁজুন..." oninput="filterCustomers()" style="max-width: 450px;">
+            <button class="btn btn-primary" onclick="openAddCustomerModal()">+ নতুন গ্রাহক যোগ</button>
+          </div>
+
+          <!-- Customers Table -->
+          <div class="data-table-wrapper">
+            <table class="data-table" id="customersTable">
+              <thead>
+                <tr>
+                  <th>ID</th>
+                  <th>গ্রাহকের নাম</th>
+                  <th>ফোন নম্বর</th>
+                  <th>বকেয়া (Due)</th>
+                  <th>অগ্রিম (Prepaid)</th>
+                  <th>ক্রেডিট লিমিট</th>
+                  <th>অ্যাকশন</th>
+                </tr>
+              </thead>
+              <tbody id="customersTbody">
+                <tr><td colspan="7" class="table-empty">লোড হচ্ছে...</td></tr>
+              </tbody>
+            </table>
           </div>
         </div>
 
-        <div class="view-section-header">
-          <h3>🏢 সরবরাহকারী তালিকা (Suppliers)</h3>
-        </div>
-        <div class="data-table-wrapper">
-          <table class="data-table" id="suppliersTable">
-            <thead><tr>
-              <th>ID</th><th>সরবরাহকারীর নাম</th><th>ফোন</th><th>ঠিকানা</th><th>মোট ক্রয়</th><th>বকেয়া দেনা</th><th>অ্যাকশন</th>
-            </tr></thead>
-            <tbody id="suppliersTbody"><tr><td colspan="7" class="table-empty">লোড হচ্ছে...</td></tr></tbody>
-          </table>
+        <!-- ── SUB-TAB 2: SUPPLIERS CONTENT ── -->
+        <div id="partyTabSuppliersContent" class="party-tab-content" style="display:none">
+          <!-- 3 KPI Cards for Suppliers -->
+          <div class="stats-grid" style="grid-template-columns: repeat(3, 1fr); margin-bottom: 20px;">
+            <div class="stat-card">
+              <span class="stat-lbl">মোট সরবরাহকারী</span>
+              <strong class="stat-val" id="sup-total-count" style="color:var(--brand-cyan)">—</strong>
+            </div>
+            <div class="stat-card">
+              <span class="stat-lbl">মোট ক্রয় খরচ</span>
+              <strong class="stat-val" id="sup-total-purchase" style="color:var(--brand-amber)">—</strong>
+            </div>
+            <div class="stat-card">
+              <span class="stat-lbl">বকেয়া দেনা</span>
+              <strong class="stat-val" id="sup-total-due" style="color:#ef4444">—</strong>
+            </div>
+          </div>
+
+          <!-- Add Supplier Form -->
+          <div class="stock-adjust-form-panel" id="addSupplierForm" style="display:none;margin-bottom:20px">
+            <h4>➕ নতুন সরবরাহকারী / মহাজন যোগ করুন</h4>
+            <div class="form-grid">
+              <div class="form-group">
+                <label>নাম (English):</label>
+                <input type="text" id="newSupplierName" class="form-input" placeholder="Supplier / Company Name">
+              </div>
+              <div class="form-group">
+                <label>নাম (বাংলা):</label>
+                <input type="text" id="newSupplierNameBn" class="form-input" placeholder="সরবরাহকারীর নাম">
+              </div>
+              <div class="form-group">
+                <label>ফোন নম্বর:</label>
+                <input type="text" id="newSupplierPhone" class="form-input" placeholder="01xxx-xxxxxx">
+              </div>
+              <div class="form-group">
+                <label>ঠিকানা:</label>
+                <input type="text" id="newSupplierAddress" class="form-input" placeholder="শহর, জেলা">
+              </div>
+            </div>
+            <div style="display:flex;gap:8px;margin-top:12px">
+              <button class="btn btn-primary" onclick="addSupplier()">✅ সংরক্ষণ করুন</button>
+              <button class="btn btn-secondary" onclick="document.getElementById('addSupplierForm').style.display='none'">বাতিল</button>
+            </div>
+          </div>
+
+          <!-- Search & Action Bar -->
+          <div style="margin-bottom: 16px; display: flex; justify-content: space-between; gap: 12px;">
+            <input type="text" id="supplierSearchInput" class="form-input" placeholder="🔍 সরবরাহকারীর নাম দিয়ে খুঁজুন..." oninput="filterSuppliers()" style="max-width: 450px;">
+            <div style="display:flex;gap:8px">
+              <button class="btn btn-primary" onclick="document.getElementById('addSupplierForm').style.display='block'">+ নতুন সরবরাহকারী</button>
+              <button class="btn btn-secondary" onclick="showView('purchase-orders')">🚚 ক্রয় অর্ডার</button>
+            </div>
+          </div>
+
+          <!-- Suppliers Table -->
+          <div class="data-table-wrapper">
+            <table class="data-table" id="suppliersTable">
+              <thead>
+                <tr>
+                  <th>ID</th>
+                  <th>সরবরাহকারীর নাম</th>
+                  <th>ফোন</th>
+                  <th>ঠিকানা</th>
+                  <th>মোট ক্রয়</th>
+                  <th>বকেয়া দেনা</th>
+                  <th>অ্যাকশন</th>
+                </tr>
+              </thead>
+              <tbody id="suppliersTbody">
+                <tr><td colspan="7" class="table-empty">লোড হচ্ছে...</td></tr>
+              </tbody>
+            </table>
+          </div>
         </div>
 
-        <div class="view-section-header">
-          <h3>👤 নিবন্ধিত গ্রাহক তালিকা (Customers)</h3>
-        </div>
-        <div class="data-table-wrapper">
-          <table class="data-table" id="customersTable">
-            <thead><tr>
-              <th>ID</th><th>গ্রাহকের নাম</th><th>ফোন</th><th>বকেয়া (Due)</th><th>অগ্রিম (Prepaid)</th><th>ক্রেডিট লিমিট</th><th>অ্যাকশন</th>
-            </tr></thead>
-            <tbody id="customersTbody"><tr><td colspan="7" class="table-empty">লোড হচ্ছে...</td></tr></tbody>
-          </table>
-        </div>
       </div>
     </section>
 
@@ -916,10 +1030,49 @@
     </div>
   </div>
 
+  <!-- CUSTOMER MODAL -->
+  <div id="customerModal" class="modal-backdrop">
+    <div class="modal-card" style="max-width:520px">
+      <div class="modal-header">
+        <h3>👤 নতুন গ্রাহক নিবন্ধন</h3>
+        <button class="btn-close" onclick="closeAddCustomerModal()">✕</button>
+      </div>
+      <div class="modal-body">
+        <div class="form-grid">
+          <div class="form-group">
+            <label>নাম (English):</label>
+            <input type="text" id="modalCustName" class="form-input" placeholder="Customer Name (e.g. Rahim Khan)">
+          </div>
+          <div class="form-group">
+            <label>নাম (বাংলা):</label>
+            <input type="text" id="modalCustNameBn" class="form-input" placeholder="গ্রাহকের নাম (যেমন: রহিম খান)">
+          </div>
+          <div class="form-group">
+            <label>মোবাইল / ফোন:</label>
+            <input type="text" id="modalCustPhone" class="form-input" placeholder="017xx-xxxxxx">
+          </div>
+          <div class="form-group">
+            <label>ক্রেডিট লিমিট (টাকা):</label>
+            <input type="number" id="modalCustCreditLimit" class="form-input" placeholder="25000" value="25000">
+          </div>
+          <div class="form-group" style="grid-column:1/-1">
+            <label>প্রাথমিক বকেয়া (যদি থাকে):</label>
+            <input type="number" id="modalCustInitialDue" class="form-input" placeholder="0" value="0">
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" onclick="closeAddCustomerModal()">বাতিল</button>
+        <button class="btn btn-primary" onclick="saveNewCustomerFromModal()">✅ সংরক্ষণ করুন</button>
+      </div>
+    </div>
+  </div>
+
   <!-- TOAST NOTIFICATION CONTAINER -->
   <div id="toast-container"></div>
   <div id="alapToast" class="alap-toast"></div>
 
+  <script id="__NILANG_STATE__" type="application/json">{}</script>
   <script src="/alap-runtime.js"></script>
 </body>
 </html>

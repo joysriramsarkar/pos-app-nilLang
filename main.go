@@ -8,6 +8,7 @@ import (
 	"os"
 	"path/filepath"
 	"strconv"
+	"strings"
 	"sync"
 	"time"
 
@@ -32,6 +33,8 @@ type AppState struct {
 var state *AppState
 
 func main() {
+	loadEnvFile(".env")
+
 	port := 8090
 	if p := os.Getenv("PORT"); p != "" {
 		if val, err := strconv.Atoi(p); err == nil {
@@ -78,6 +81,7 @@ func main() {
 	srv.GET("/api/catalog", handleCatalog)
 	srv.GET("/api/products", handleCatalog)
 	srv.GET("/api/customers", handleCustomers)
+	srv.POST("/api/customers", handleAddCustomer)
 	srv.GET("/api/due-collection", handleDueCollectionList)
 	srv.POST("/api/due-collection", handleCustomerDuePayment)
 	srv.GET("/api/ledger/:id", handleCustomerLedger)
@@ -485,6 +489,70 @@ func handleCustomers(ctx *routing.Context) (interface{}, error) {
 	return enriched, nil
 }
 
+type AddCustomerRequest struct {
+	Name             string `json:"name"`
+	NameBn           string `json:"nameBn"`
+	Phone            string `json:"phone"`
+	CreditLimitMinor int64  `json:"creditLimitMinor"`
+	DueMinor         int64  `json:"dueMinor"`
+	PrepaidMinor     int64  `json:"prepaidMinor"`
+}
+
+func handleAddCustomer(ctx *routing.Context) (interface{}, error) {
+	var req AddCustomerRequest
+	if bodyBytes, err := json.Marshal(ctx.Body); err == nil {
+		_ = json.Unmarshal(bodyBytes, &req)
+	}
+
+	if req.Name == "" && req.NameBn == "" {
+		ctx.StatusCode = 400
+		return nil, fmt.Errorf("customer name is required")
+	}
+
+	if req.Name == "" {
+		req.Name = req.NameBn
+	}
+	if req.NameBn == "" {
+		req.NameBn = req.Name
+	}
+	if req.CreditLimitMinor <= 0 {
+		req.CreditLimitMinor = 2500000 // default 25,000 BDT
+	}
+
+	state.mu.Lock()
+	defer state.mu.Unlock()
+
+	custID := fmt.Sprintf("c-%d", time.Now().UnixNano()%10000000)
+	customer := map[string]interface{}{
+		"id":               custID,
+		"name":             req.Name,
+		"nameBn":           req.NameBn,
+		"phone":            req.Phone,
+		"dueMinor":         req.DueMinor,
+		"prepaidMinor":     req.PrepaidMinor,
+		"creditLimitMinor": req.CreditLimitMinor,
+	}
+
+	_, err := data.Table("customers").Insert(state.pool, customer)
+	if err != nil {
+		ctx.StatusCode = 500
+		return nil, fmt.Errorf("failed to insert customer: %v", err)
+	}
+
+	if state.neonRepo != nil {
+		_ = state.neonRepo.PersistCustomer(customer)
+	}
+
+	customer["dueFormatted"] = data.NewMoney(req.DueMinor, "BDT").Format()
+	customer["prepaidFormatted"] = data.NewMoney(req.PrepaidMinor, "BDT").Format()
+	customer["creditLimitFormatted"] = data.NewMoney(req.CreditLimitMinor, "BDT").Format()
+
+	return map[string]interface{}{
+		"ok":       true,
+		"customer": customer,
+	}, nil
+}
+
 func handleCustomerLedger(ctx *routing.Context) (interface{}, error) {
 	custID := ctx.Param("id")
 	if custID == "" {
@@ -839,7 +907,7 @@ func handleCheckout(ctx *routing.Context) (interface{}, error) {
 
 	txErr := state.pool.Transaction(func(tx *data.Tx) error {
 		// A. Deduct stock for all items and record stock_history
-		for _, pi := range processed {
+		for idx, pi := range processed {
 			newStock := pi.Product["stock"].(int64) - pi.Qty
 			pi.Product["stock"] = newStock
 			_, err := data.Table("products").Where("id", "=", pi.Product["id"]).Update(state.pool, pi.Product)
@@ -848,7 +916,7 @@ func handleCheckout(ctx *routing.Context) (interface{}, error) {
 			}
 
 			_, _ = data.Table("stock_history").Insert(state.pool, map[string]interface{}{
-				"id":         fmt.Sprintf("sh-%d", time.Now().UnixNano()),
+				"id":         fmt.Sprintf("sh-%s-%d", saleID, idx+1),
 				"productId":  pi.Product["id"],
 				"type":       "SALE",
 				"qtyChange":  -pi.Qty,
@@ -871,7 +939,7 @@ func handleCheckout(ctx *routing.Context) (interface{}, error) {
 			}
 
 			_, _ = data.Table("ledger_entries").Insert(state.pool, map[string]interface{}{
-				"id":            fmt.Sprintf("led-%d", time.Now().UnixNano()),
+				"id":            fmt.Sprintf("led-%s", saleID),
 				"customerId":    req.CustomerID,
 				"saleId":        saleID,
 				"dueChange":     req.Payment.DueMinor,
@@ -908,9 +976,9 @@ func handleCheckout(ctx *routing.Context) (interface{}, error) {
 		}
 
 		// D. Insert Sale Items
-		for _, pi := range processed {
+		for idx, pi := range processed {
 			_, err = data.Table("sale_items").Insert(state.pool, map[string]interface{}{
-				"id":             fmt.Sprintf("si-%d", time.Now().UnixNano()),
+				"id":             fmt.Sprintf("si-%s-%d", saleID, idx+1),
 				"saleId":         saleID,
 				"productId":      pi.Product["id"],
 				"productName":    pi.Product["name"],
@@ -939,14 +1007,14 @@ func handleCheckout(ctx *routing.Context) (interface{}, error) {
 		var stockHistories []map[string]interface{}
 		var saleItems []map[string]interface{}
 
-		for _, pi := range processed {
+		for idx, pi := range processed {
 			newStk := pi.Product["stock"].(int64)
 			stockUpdates = append(stockUpdates, map[string]interface{}{
 				"id":    pi.Product["id"],
 				"stock": newStk,
 			})
 			stockHistories = append(stockHistories, map[string]interface{}{
-				"id":         fmt.Sprintf("sh-%d", time.Now().UnixNano()),
+				"id":         fmt.Sprintf("sh-%s-%d", saleID, idx+1),
 				"productId":  pi.Product["id"],
 				"type":       "SALE",
 				"qtyChange":  -pi.Qty,
@@ -955,7 +1023,7 @@ func handleCheckout(ctx *routing.Context) (interface{}, error) {
 				"timestamp":  nowUnix,
 			})
 			saleItems = append(saleItems, map[string]interface{}{
-				"id":             fmt.Sprintf("si-%d", time.Now().UnixNano()),
+				"id":             fmt.Sprintf("si-%s-%d", saleID, idx+1),
 				"saleId":         saleID,
 				"productId":      pi.Product["id"],
 				"productName":    pi.Product["name"],
@@ -972,7 +1040,7 @@ func handleCheckout(ctx *routing.Context) (interface{}, error) {
 		if req.Payment.DueMinor > 0 || req.Payment.PrepaidMinor > 0 {
 			custUp = cust
 			ledEntry = map[string]interface{}{
-				"id":            fmt.Sprintf("led-%d", time.Now().UnixNano()),
+				"id":            fmt.Sprintf("led-%s", saleID),
 				"customerId":    req.CustomerID,
 				"saleId":        saleID,
 				"dueChange":     req.Payment.DueMinor,
@@ -1787,3 +1855,28 @@ func toInt64(v interface{}) (int64, bool) {
 		return 0, false
 	}
 }
+
+// loadEnvFile reads a key=value .env file and sets environment variables if not already set
+func loadEnvFile(path string) {
+	content, err := os.ReadFile(path)
+	if err != nil {
+		return
+	}
+	lines := strings.Split(string(content), "\n")
+	for _, line := range lines {
+		line = strings.TrimSpace(line)
+		if line == "" || strings.HasPrefix(line, "#") {
+			continue
+		}
+		parts := strings.SplitN(line, "=", 2)
+		if len(parts) == 2 {
+			k := strings.TrimSpace(parts[0])
+			v := strings.TrimSpace(parts[1])
+			v = strings.Trim(v, `"'`)
+			if os.Getenv(k) == "" && k != "" {
+				_ = os.Setenv(k, v)
+			}
+		}
+	}
+}
+

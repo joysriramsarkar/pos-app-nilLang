@@ -718,7 +718,9 @@ function showView(viewId) {
     case 'dashboard':       loadDashboard(); break;
     case 'transactions':    loadTransactions(); break;
     case 'stock':           loadStockList(); break;
-    case 'suppliers':       loadSuppliers(); loadCustomersTable(); break;
+    case 'parties':         loadPartiesView(); break;
+    case 'customers':       showView('parties'); switchPartyTab('customers'); break;
+    case 'suppliers':       showView('parties'); switchPartyTab('suppliers'); break;
     case 'due-settlement':  loadDueCollectionList(); break;
     case 'reports':         loadReports(); break;
     case 'expenses':        loadExpenses(); break;
@@ -960,58 +962,329 @@ function closeStockAdjustForm() {
 }
 
 // ─── PARTIES (Suppliers & Customers) ─────────────────────────────────────────
+let allLoadedSuppliers = [];
+let allLoadedCustomers = [];
+let activePartyTab = 'customers'; // 'customers' | 'suppliers'
+
+function switchPartyTab(tab) {
+  activePartyTab = tab;
+  const custContent = document.getElementById('partyTabCustomersContent');
+  const supContent = document.getElementById('partyTabSuppliersContent');
+  const btnCust = document.getElementById('tabBtnCustomers');
+  const btnSup = document.getElementById('tabBtnSuppliers');
+
+  if (tab === 'customers') {
+    if (custContent) custContent.style.display = 'block';
+    if (supContent) supContent.style.display = 'none';
+    if (btnCust) {
+      btnCust.classList.add('active');
+      btnCust.style.color = 'var(--brand-cyan)';
+      btnCust.style.borderBottomColor = 'var(--brand-cyan)';
+      btnCust.style.fontWeight = '700';
+    }
+    if (btnSup) {
+      btnSup.classList.remove('active');
+      btnSup.style.color = 'var(--text-muted)';
+      btnSup.style.borderBottomColor = 'transparent';
+      btnSup.style.fontWeight = '600';
+    }
+    loadCustomersTable();
+  } else {
+    if (custContent) custContent.style.display = 'none';
+    if (supContent) supContent.style.display = 'block';
+    if (btnSup) {
+      btnSup.classList.add('active');
+      btnSup.style.color = 'var(--brand-cyan)';
+      btnSup.style.borderBottomColor = 'var(--brand-cyan)';
+      btnSup.style.fontWeight = '700';
+    }
+    if (btnCust) {
+      btnCust.classList.remove('active');
+      btnCust.style.color = 'var(--text-muted)';
+      btnCust.style.borderBottomColor = 'transparent';
+      btnCust.style.fontWeight = '600';
+    }
+    loadSuppliers();
+  }
+}
+
+async function loadPartiesView() {
+  await Promise.all([loadCustomersTable(), loadSuppliers()]);
+  switchPartyTab(activePartyTab);
+}
+
+function openPartyAddAction() {
+  if (activePartyTab === 'customers') {
+    openAddCustomerModal();
+  } else {
+    const f = document.getElementById('addSupplierForm');
+    if (f) {
+      f.style.display = 'block';
+      document.getElementById('newSupplierNameBn')?.focus();
+    }
+  }
+}
+
 async function loadSuppliers() {
   try {
     const res = await fetch('/api/suppliers');
     const suppliers = await res.json();
+    allLoadedSuppliers = Array.isArray(suppliers) ? suppliers : [];
     const tbody = document.getElementById('suppliersTbody');
     const poSel = document.getElementById('poSupplierSelect');
 
     if (poSel) {
-      poSel.innerHTML = (suppliers || []).map(s => `
+      poSel.innerHTML = (allLoadedSuppliers || []).map(s => `
         <option value="${s.id}">${s.nameBn || s.name}</option>
       `).join('');
     }
 
-    if (!tbody) return;
-    if (!suppliers || suppliers.length === 0) {
-      tbody.innerHTML = '<tr><td colspan="7" class="table-empty">কোনো সরবরাহকারী নেই।</td></tr>';
-      return;
+    // Update KPI summary cards
+    const totalCount = allLoadedSuppliers.length;
+    let totalPurchaseMinor = 0;
+    let totalDueMinor = 0;
+    for (const s of allLoadedSuppliers) {
+      totalPurchaseMinor += (s.totalPurchaseMinor || 0);
+      totalDueMinor += (s.dueMinor || 0);
     }
+    const supCntEl = document.getElementById('sup-total-count');
+    if (supCntEl) supCntEl.textContent = toBnNum(totalCount) + ' জন';
+    const supPurEl = document.getElementById('sup-total-purchase');
+    if (supPurEl) supPurEl.textContent = fmtMoney(totalPurchaseMinor);
+    const supDueEl = document.getElementById('sup-total-due');
+    if (supDueEl) supDueEl.textContent = fmtMoney(totalDueMinor);
 
-    tbody.innerHTML = suppliers.map(s => `
-      <tr>
-        <td><span style="font-family:monospace;font-size:11px">${s.id}</span></td>
-        <td style="font-weight:600">${s.nameBn || s.name}</td>
-        <td>${s.phone || '—'}</td>
-        <td style="color:var(--text-muted);font-size:12px">${s.address || '—'}</td>
-        <td style="font-weight:600">${fmtMoney(s.totalPurchaseMinor || 0)}</td>
-        <td style="color:#ef4444;font-weight:700">${fmtMoney(s.dueMinor || 0)}</td>
-        <td><button class="btn btn-glass" style="font-size:11px;padding:4px 8px" onclick="showToast('অর্ডার তৈরি করুন')">ক্রয় অর্ডার</button></td>
-      </tr>
-    `).join('');
+    renderSuppliersTable(allLoadedSuppliers);
   } catch (err) { console.error('Suppliers error:', err); }
+}
+
+function renderSuppliersTable(list) {
+  const tbody = document.getElementById('suppliersTbody');
+  if (!tbody) return;
+  if (!list || list.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="7" class="table-empty">কোনো সরবরাহকারী পাওয়া যায়নি।</td></tr>';
+    return;
+  }
+
+  tbody.innerHTML = list.map(s => `
+    <tr>
+      <td><span style="font-family:monospace;font-size:11px">${s.id}</span></td>
+      <td style="font-weight:600">${s.nameBn || s.name}</td>
+      <td>${s.phone || '—'}</td>
+      <td style="color:var(--text-muted);font-size:12px">${s.address || '—'}</td>
+      <td style="font-weight:600">${fmtMoney(s.totalPurchaseMinor || 0)}</td>
+      <td style="color:#ef4444;font-weight:700">${fmtMoney(s.dueMinor || 0)}</td>
+      <td><button class="btn btn-glass" style="font-size:11px;padding:4px 8px" onclick="showView('purchase-orders')">ক্রয় অর্ডার</button></td>
+    </tr>
+  `).join('');
+}
+
+function filterSuppliers() {
+  const query = (document.getElementById('supplierSearchInput')?.value || '').toLowerCase().trim();
+  if (!query) {
+    renderSuppliersTable(allLoadedSuppliers);
+    return;
+  }
+  const filtered = allLoadedSuppliers.filter(s =>
+    (s.name && s.name.toLowerCase().includes(query)) ||
+    (s.nameBn && s.nameBn.toLowerCase().includes(query)) ||
+    (s.phone && s.phone.includes(query)) ||
+    (s.address && s.address.toLowerCase().includes(query))
+  );
+  renderSuppliersTable(filtered);
 }
 
 async function loadCustomersTable() {
   try {
     const res = await fetch('/api/customers');
     const customers = await res.json();
-    const tbody = document.getElementById('customersTbody');
-    if (!tbody) return;
+    allLoadedCustomers = Array.isArray(customers) ? customers : [];
+    state.customers = allLoadedCustomers;
 
-    tbody.innerHTML = (customers || []).map(c => `
-      <tr>
-        <td><span style="font-family:monospace;font-size:11px">${c.id}</span></td>
-        <td style="font-weight:600">${c.nameBn || c.name}</td>
-        <td>${c.phone || '—'}</td>
-        <td style="color:${c.dueMinor > 0 ? '#ef4444' : '#16a34a'};font-weight:700">${fmtMoney(c.dueMinor || 0)}</td>
-        <td style="color:#16a34a">${fmtMoney(c.prepaidMinor || 0)}</td>
-        <td style="color:var(--text-muted)">${fmtMoney(c.creditLimitMinor || 0)}</td>
-        <td><button class="btn btn-glass" style="font-size:11px;padding:4px 8px" onclick="showView('due-settlement')">বাকি শোধ</button></td>
-      </tr>
-    `).join('');
+    // Update customer dropdown in POS Cart if needed
+    const custSel = document.getElementById('customerSelect');
+    if (custSel && state.customers.length > 0) {
+      const curVal = custSel.value;
+      custSel.innerHTML = state.customers.map(c => `
+        <option value="${c.id}" ${c.id === curVal ? 'selected' : ''}>
+          ${c.nameBn || c.name} ${c.dueMinor > 0 ? `(বাকি: ৳${(c.dueMinor/100).toFixed(0)})` : ''}
+        </option>
+      `).join('');
+    }
+
+    // Update KPI summary cards
+    const totalCount = allLoadedCustomers.length;
+    let totalDueMinor = 0;
+    let totalPrepaidMinor = 0;
+    for (const c of allLoadedCustomers) {
+      totalDueMinor += (c.dueMinor || 0);
+      totalPrepaidMinor += (c.prepaidMinor || 0);
+    }
+    const custCntEl = document.getElementById('cust-total-count');
+    if (custCntEl) custCntEl.textContent = toBnNum(totalCount) + ' জন';
+    const custDueEl = document.getElementById('cust-total-due');
+    if (custDueEl) custDueEl.textContent = fmtMoney(totalDueMinor);
+    const custPrepEl = document.getElementById('cust-total-prepaid');
+    if (custPrepEl) custPrepEl.textContent = fmtMoney(totalPrepaidMinor);
+
+    renderCustomersTable(allLoadedCustomers);
   } catch (err) { console.error('Customers error:', err); }
+}
+
+function renderCustomersTable(list) {
+  const tbody = document.getElementById('customersTbody');
+  if (!tbody) return;
+  if (!list || list.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="7" class="table-empty">কোনো গ্রাহক পাওয়া যায়নি।</td></tr>';
+    return;
+  }
+
+  tbody.innerHTML = list.map(c => `
+    <tr>
+      <td><span style="font-family:monospace;font-size:11px">${c.id}</span></td>
+      <td style="font-weight:600">${c.nameBn || c.name}</td>
+      <td>${c.phone || '—'}</td>
+      <td style="color:${c.dueMinor > 0 ? '#ef4444' : '#16a34a'};font-weight:700">${fmtMoney(c.dueMinor || 0)}</td>
+      <td style="color:#16a34a">${fmtMoney(c.prepaidMinor || 0)}</td>
+      <td style="color:var(--text-muted)">${fmtMoney(c.creditLimitMinor || 0)}</td>
+      <td style="display:flex;gap:4px">
+        <button class="btn btn-glass" style="font-size:11px;padding:4px 8px" onclick="showView('due-settlement')">বাকি শোধ</button>
+      </td>
+    </tr>
+  `).join('');
+}
+
+function filterCustomers() {
+  const query = (document.getElementById('customerSearchInput')?.value || '').toLowerCase().trim();
+  if (!query) {
+    renderCustomersTable(allLoadedCustomers);
+    return;
+  }
+  const filtered = allLoadedCustomers.filter(c =>
+    (c.name && c.name.toLowerCase().includes(query)) ||
+    (c.nameBn && c.nameBn.toLowerCase().includes(query)) ||
+    (c.phone && c.phone.includes(query)) ||
+    (c.id && c.id.toLowerCase().includes(query))
+  );
+  renderCustomersTable(filtered);
+}
+
+function openAddCustomerModal() {
+  const inlinePanel = document.getElementById('addCustomerFormPanel');
+  const modal = document.getElementById('customerModal');
+  const isPartiesActive = document.getElementById('view-parties')?.classList.contains('active');
+
+  if (inlinePanel && isPartiesActive) {
+    inlinePanel.style.display = 'block';
+    inlinePanel.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    document.getElementById('newCustNameBn')?.focus();
+  } else if (modal) {
+    modal.classList.add('active');
+    modal.style.display = 'flex';
+    document.getElementById('modalCustNameBn')?.focus();
+  } else if (inlinePanel) {
+    inlinePanel.style.display = 'block';
+    document.getElementById('newCustNameBn')?.focus();
+  }
+}
+
+function closeAddCustomerModal() {
+  const inlinePanel = document.getElementById('addCustomerFormPanel');
+  if (inlinePanel) inlinePanel.style.display = 'none';
+  const modal = document.getElementById('customerModal');
+  if (modal) {
+    modal.classList.remove('active');
+    modal.style.display = 'none';
+  }
+}
+
+async function saveNewCustomer() {
+  const name = document.getElementById('newCustName')?.value.trim();
+  const nameBn = document.getElementById('newCustNameBn')?.value.trim();
+  const phone = document.getElementById('newCustPhone')?.value.trim();
+  const limit = Number(document.getElementById('newCustCreditLimit')?.value) || 25000;
+  const initialDue = Number(document.getElementById('newCustInitialDue')?.value) || 0;
+
+  if (!name && !nameBn) {
+    showToast('❌ গ্রাহকের নাম প্রদান করুন');
+    return;
+  }
+
+  try {
+    const res = await fetch('/api/customers', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        name: name || nameBn,
+        nameBn: nameBn || name,
+        phone: phone || '',
+        creditLimitMinor: Math.round(limit * 100),
+        dueMinor: Math.round(initialDue * 100),
+        prepaidMinor: 0
+      })
+    });
+    const d = await res.json();
+    if (d.ok) {
+      showToast('✅ নতুন গ্রাহক সফলভাবে নিবন্ধিত হয়েছে!');
+      closeAddCustomerModal();
+      // Clear inputs
+      if (document.getElementById('newCustName')) document.getElementById('newCustName').value = '';
+      if (document.getElementById('newCustNameBn')) document.getElementById('newCustNameBn').value = '';
+      if (document.getElementById('newCustPhone')) document.getElementById('newCustPhone').value = '';
+      if (document.getElementById('newCustInitialDue')) document.getElementById('newCustInitialDue').value = '0';
+      loadCustomersTable();
+      loadDashboard();
+    } else {
+      showToast('❌ গ্রাহক সংরক্ষণে ব্যর্থ: ' + (d.error || 'ত্রুটি'));
+    }
+  } catch (err) {
+    console.error('Customer create error:', err);
+    showToast('❌ গ্রাহক সংরক্ষণে ব্যর্থ');
+  }
+}
+
+async function saveNewCustomerFromModal() {
+  const name = document.getElementById('modalCustName')?.value.trim();
+  const nameBn = document.getElementById('modalCustNameBn')?.value.trim();
+  const phone = document.getElementById('modalCustPhone')?.value.trim();
+  const limit = Number(document.getElementById('modalCustCreditLimit')?.value) || 25000;
+  const initialDue = Number(document.getElementById('modalCustInitialDue')?.value) || 0;
+
+  if (!name && !nameBn) {
+    showToast('❌ গ্রাহকের নাম প্রদান করুন');
+    return;
+  }
+
+  try {
+    const res = await fetch('/api/customers', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        name: name || nameBn,
+        nameBn: nameBn || name,
+        phone: phone || '',
+        creditLimitMinor: Math.round(limit * 100),
+        dueMinor: Math.round(initialDue * 100),
+        prepaidMinor: 0
+      })
+    });
+    const d = await res.json();
+    if (d.ok) {
+      showToast('✅ নতুন গ্রাহক সফলভাবে নিবন্ধিত হয়েছে!');
+      closeAddCustomerModal();
+      if (document.getElementById('modalCustName')) document.getElementById('modalCustName').value = '';
+      if (document.getElementById('modalCustNameBn')) document.getElementById('modalCustNameBn').value = '';
+      if (document.getElementById('modalCustPhone')) document.getElementById('modalCustPhone').value = '';
+      if (document.getElementById('modalCustInitialDue')) document.getElementById('modalCustInitialDue').value = '0';
+      loadCustomersTable();
+      loadDashboard();
+    } else {
+      showToast('❌ গ্রাহক সংরক্ষণে ব্যর্থ: ' + (d.error || 'ত্রুটি'));
+    }
+  } catch (err) {
+    console.error('Customer create error:', err);
+    showToast('❌ গ্রাহক সংরক্ষণে ব্যর্থ');
+  }
 }
 
 async function addSupplier() {
@@ -1031,8 +1304,14 @@ async function addSupplier() {
     const d = await res.json();
     if (d.ok) {
       showToast('✅ নতুন সরবরাহকারী সফলভাবে যোগ হয়েছে!');
-      document.getElementById('addSupplierForm').style.display = 'none';
+      const form = document.getElementById('addSupplierForm');
+      if (form) form.style.display = 'none';
+      if (document.getElementById('newSupplierName')) document.getElementById('newSupplierName').value = '';
+      if (document.getElementById('newSupplierNameBn')) document.getElementById('newSupplierNameBn').value = '';
+      if (document.getElementById('newSupplierPhone')) document.getElementById('newSupplierPhone').value = '';
+      if (document.getElementById('newSupplierAddress')) document.getElementById('newSupplierAddress').value = '';
       loadSuppliers();
+      loadDashboard();
     }
   } catch (e) { showToast('❌ সরবরাহকারী সংরক্ষণে ব্যর্থ'); }
 }

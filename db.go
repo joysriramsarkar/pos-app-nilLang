@@ -10,8 +10,6 @@ import (
 	"github.com/joysriramsarkar/nilLang/pkg/alap/data"
 )
 
-const defaultNeonDSN = "postgresql://neondb_owner:npg_edB0iohNLFa9@ep-sparkling-breeze-az12xbxn-pooler.c-3.ap-southeast-1.aws.neon.tech/neondb?sslmode=require&channel_binding=require"
-
 // NeonRepo manages Neon PostgreSQL operations and synchronization with NilLang Alap
 type NeonRepo struct {
 	pool *data.RealDBPool
@@ -23,10 +21,10 @@ type NeonRepo struct {
 func InitNeonDB() (*NeonRepo, error) {
 	dsn := os.Getenv("DATABASE_URL")
 	if dsn == "" {
-		dsn = defaultNeonDSN
+		return nil, fmt.Errorf("DATABASE_URL environment variable is not set")
 	}
 
-	fmt.Println("🔌 [Alap Data] Connecting to Neon PostgreSQL (AWS Southeast Asia)...")
+	fmt.Println("🔌 [Alap Data] Connecting to Neon PostgreSQL...")
 	realPool, err := data.OpenPostgres(dsn)
 	if err != nil {
 		return nil, fmt.Errorf("failed to open postgres connection: %w", err)
@@ -174,17 +172,7 @@ func (r *NeonRepo) migrate() error {
 }
 
 func (r *NeonRepo) seedIfEmpty() error {
-	var count int
-	err := r.pool.QueryRow(`SELECT COUNT(*) FROM products`).Scan(&count)
-	if err != nil {
-		return err
-	}
-	if count > 0 {
-		fmt.Printf("📦 [Alap Data] Neon PostgreSQL already contains %d products. Skipping initial seed.\n", count)
-		return nil
-	}
-
-	fmt.Println("🌱 [Alap Data] Seeding catalog and enterprise data into Neon PostgreSQL...")
+	fmt.Println("🌱 [Alap Data] Verifying and synchronizing catalog and enterprise data with Neon PostgreSQL...")
 
 	return r.pool.Transaction(func(tx *data.RealTx) error {
 		// Categories
@@ -248,7 +236,7 @@ func (r *NeonRepo) seedIfEmpty() error {
 
 		// Initial Sale
 		sale := initialSale()
-		_, err = tx.Exec(`INSERT INTO sales ("id", "invoiceNo", "customerId", "customerName", "cashierName", "subtotalMinor", "discountMinor", "taxMinor", "grandMinor", "cogsMinor", "cashPaidMinor", "upiPaidMinor", "prepaidPaidMinor", "duePaidMinor", "changeMinor", "timestamp")
+		_, err := tx.Exec(`INSERT INTO sales ("id", "invoiceNo", "customerId", "customerName", "cashierName", "subtotalMinor", "discountMinor", "taxMinor", "grandMinor", "cogsMinor", "cashPaidMinor", "upiPaidMinor", "prepaidPaidMinor", "duePaidMinor", "changeMinor", "timestamp")
 			VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16) ON CONFLICT ("id") DO NOTHING`,
 			sale["id"], sale["invoiceNo"], sale["customerId"], sale["customerName"], sale["cashierName"], sale["subtotalMinor"], sale["discountMinor"], sale["taxMinor"], sale["grandMinor"], sale["cogsMinor"], sale["cashPaidMinor"], sale["upiPaidMinor"], sale["prepaidPaidMinor"], sale["duePaidMinor"], sale["changeMinor"], sale["timestamp"])
 		if err != nil {
@@ -406,6 +394,14 @@ func (r *NeonRepo) PersistExpense(exp map[string]interface{}) error {
 	_, err := r.pool.Exec(`INSERT INTO expenses ("id", "description", "category", "categoryBn", "amountMinor", "paidBy", "timestamp")
 		VALUES ($1, $2, $3, $4, $5, $6, $7)`,
 		exp["id"], exp["description"], exp["category"], exp["categoryBn"], exp["amountMinor"], exp["paidBy"], exp["timestamp"])
+	return err
+}
+
+func (r *NeonRepo) PersistCustomer(cust map[string]interface{}) error {
+	_, err := r.pool.Exec(`INSERT INTO customers ("id", "name", "nameBn", "phone", "dueMinor", "prepaidMinor", "creditLimitMinor")
+		VALUES ($1, $2, $3, $4, $5, $6, $7)
+		ON CONFLICT ("id") DO UPDATE SET "name" = $2, "nameBn" = $3, "phone" = $4, "dueMinor" = $5, "prepaidMinor" = $6, "creditLimitMinor" = $7`,
+		cust["id"], cust["name"], cust["nameBn"], cust["phone"], cust["dueMinor"], cust["prepaidMinor"], cust["creditLimitMinor"])
 	return err
 }
 

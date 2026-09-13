@@ -708,6 +708,7 @@ html, body {
   line-height: 1.3;
   display: -webkit-box;
   -webkit-line-clamp: 2;
+  line-clamp: 2;
   -webkit-box-orient: vertical;
   overflow: hidden;
   min-height: 35px;
@@ -1505,6 +1506,10 @@ html, body {
   justify-content: center;
   z-index: 999;
   padding: 16px;
+}
+
+.modal-backdrop.active {
+  display: flex !important;
 }
 
 .modal-card {
