@@ -1,0 +1,23 @@
+{
+  "name": "pos-app",
+  "version": "1.0.0",
+  "description": "Full-Featured Enterprise Point of Sale System powered by Nilang and Alap Framework",
+  "author": "Joy Sriram Sarkar",
+  "license": "MIT",
+  "entry": "src/main.nil",
+  "main": "src/main.nil",
+  "capabilities": [
+    "Database",
+    "Network",
+    "Printer",
+    "Scanner",
+    "Filesystem"
+  ],
+  "dependencies": {
+    "alap/web": "^1.0.0",
+    "alap/data": "^1.0.0",
+    "alap/money": "^1.0.0",
+    "alap/security": "^1.0.0",
+    "alap/realtime": "^1.0.0"
+  }
+}

@@ -1,0 +1,58 @@
+// src/main.nil - Main Entrypoint for Nilang POS System
+import "web";
+import "data";
+import "money";
+import "security";
+
+import "./domain/money.nil" as MoneyEngine;
+import "./domain/cart.nil" as CartEngine;
+import "./domain/checkout.nil" as CheckoutEngine;
+import "./domain/ledger.nil" as LedgerEngine;
+import "./domain/stock.nil" as StockEngine;
+
+// Initialize POS Application System
+puts("🏪 [Nilang POS] Initializing Lakhan Bhandar Enterprise Retail System...");
+
+let product1 = {
+    "id": "p-01",
+    "name": "মিনিকেট চাল / Miniket Rice (50kg)",
+    "sku": "RICE-MIN-50",
+    "barcode": "8901030012345",
+    "priceMinor": 320000, // ৳3,200.00
+    "wacMinor": 285000,   // ৳2,850.00 WAC cost
+    "stock": 40
+};
+
+let product2 = {
+    "id": "p-02",
+    "name": "তীর সয়াবিন তেল / Teer Soybean Oil (5L)",
+    "sku": "OIL-TEER-5L",
+    "barcode": "8901030098765",
+    "priceMinor": 89000,  // ৳890.00
+    "wacMinor": 81000,    // ৳810.00
+    "stock": 65
+};
+
+let product3 = {
+    "id": "p-03",
+    "name": "ফ্রেশ আটা / Fresh Atta (2kg)",
+    "sku": "ATTA-FRSH-2K",
+    "barcode": "8901030055555",
+    "priceMinor": 12500,  // ৳125.00
+    "wacMinor": 10500,    // ৳105.00
+    "stock": 120
+};
+
+puts("📦 [Catalog Loaded] 3 Baseline Wholesale & Retail Items Ready.");
+
+// Multi-Tab Cart Verification
+let cart = CartEngine.createCart("tab-1");
+CartEngine.addLine(cart, product1, 1);
+CartEngine.addLine(cart, product2, 2);
+
+let totals = CartEngine.calculateTotals(cart);
+let grandFormatted = MoneyEngine.format(MoneyEngine.ofMinor(totals["grandMinor"], "BDT"));
+puts("🛒 [Cart Verified] Grand Total: " + grandFormatted);
+
+puts("🎨 [Alap UI] POS Declarative Component Hierarchy Ready (Header, CatalogPane, CartPane, Modals).");
+puts("✅ [Nilang POS Core Engine Ready]");

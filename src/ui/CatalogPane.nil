@@ -1,0 +1,147 @@
+// src/ui/CatalogPane.nil - POS Product Catalog & Scanner Pane (NilLang Alap)
+import { Column, Row, Text, Input, Button, Card, LazyList, Spacer } from "alap/ui";
+
+component CatalogPane {
+    prop products: any[] = [];
+    @State searchQuery: string = "";
+    @State selectedCategory: string = "all";
+
+    build() {
+        Column {
+            // Barcode & Quick Search Bar
+            Row {
+                Row {
+                    Text("🔍")
+                        .fontSize(18)
+                        .margin({ right: 8 })
+
+                    Input(searchQuery)
+                        .id("barcodeSearchInput")
+                        .placeholder("বারকোড স্ক্যান করুন বা পণ্যের নাম / SKU লিখুন (F2)...")
+                        .fontSize(15)
+                        .width("100%")
+                        .onInput => (val) {
+                            searchQuery = val;
+                            this.emit("searchChange", val);
+                        }
+                }
+                .flex(1)
+                .padding({ horizontal: 14, vertical: 10 })
+                .backgroundColor("#1e293b")
+                .borderRadius(10)
+                .border({ width: 1, color: "rgba(255,255,255,0.1)" })
+                .margin({ right: 12 })
+
+                Button("F2 ফোকাস") {
+                    onClick => {
+                        this.emit("focusSearch");
+                    }
+                }
+                .variant("secondary")
+            }
+            .padding(16)
+            .width("100%")
+
+            // Category Filter Pills
+            Row {
+                Button("সব পণ্য")
+                    .variant(selectedCategory == "all" ? "primary" : "pill")
+                    .onClick => { selectedCategory = "all"; this.emit("filterCategory", "all"); }
+                    .margin({ right: 8 })
+
+                Button("চাল ও ডাল")
+                    .variant(selectedCategory == "চাল ও ডাল" ? "primary" : "pill")
+                    .onClick => { selectedCategory = "চাল ও ডাল"; this.emit("filterCategory", "চাল ও ডাল"); }
+                    .margin({ right: 8 })
+
+                Button("তেল ও ঘি")
+                    .variant(selectedCategory == "তেল ও ঘি" ? "primary" : "pill")
+                    .onClick => { selectedCategory = "তেল ও ঘি"; this.emit("filterCategory", "তেল ও ঘি"); }
+                    .margin({ right: 8 })
+
+                Button("মসলা ও লবণ")
+                    .variant(selectedCategory == "মসলা ও লবণ" ? "primary" : "pill")
+                    .onClick => { selectedCategory = "মসলা ও লবণ"; this.emit("filterCategory", "মসলা ও লবণ"); }
+                    .margin({ right: 8 })
+
+                Button("আটা ও ময়দা")
+                    .variant(selectedCategory == "আটা ও ময়দা" ? "primary" : "pill")
+                    .onClick => { selectedCategory = "আটা ও ময়দা"; this.emit("filterCategory", "আটা ও ময়দা"); }
+            }
+            .padding({ horizontal: 16, bottom: 12 })
+            .overflow("scroll-x")
+
+            // Product Catalog Grid
+            LazyList {
+                id: "productGrid",
+                items: products,
+                render: (prod) => {
+                    Card {
+                        Column {
+                            Row {
+                                Text(prod.sku)
+                                    .fontSize(11)
+                                    .fontWeight("600")
+                                    .color("#94a3b8")
+                                
+                                Spacer()
+
+                                Text(prod.stock > 0 ? "মজুদ: " + prod.stock.toString() : "স্টক শেষ")
+                                    .fontSize(11)
+                                    .fontWeight("600")
+                                    .color(prod.stock <= 5 ? "#f59e0b" : "#10b981")
+                            }
+
+                            Text(prod.name)
+                                .fontSize(14)
+                                .fontWeight("600")
+                                .color("#f8fafc")
+                                .maxLines(2)
+                                .margin({ top: 6, bottom: 8 })
+
+                            Spacer()
+
+                            Row {
+                                Column {
+                                    Text("মূল্য")
+                                        .fontSize(11)
+                                        .color("#64748b")
+                                    Text(prod.priceFormatted)
+                                        .fontSize(15)
+                                        .fontWeight("700")
+                                        .color("#00d4ff")
+                                }
+
+                                Spacer()
+
+                                Button("＋ যোগ") {
+                                    onClick => {
+                                        this.emit("addToCart", prod);
+                                    }
+                                }
+                                .variant("primary")
+                                .size("sm")
+                                .disabled(prod.stock <= 0)
+                            }
+                        }
+                        .padding(14)
+                    }
+                    .backgroundColor("#161622")
+                    .borderRadius(10)
+                    .border({ width: 1, color: "rgba(255,255,255,0.06)" })
+                    .cursor("pointer")
+                    .onClick => {
+                        if (prod.stock > 0) {
+                            this.emit("addToCart", prod);
+                        }
+                    }
+                }
+            }
+            .grow()
+            .padding(16)
+        }
+        .width("60%")
+        .backgroundColor("#0a0a0f")
+        .border({ right: 1, color: "rgba(255,255,255,0.08)" })
+    }
+}

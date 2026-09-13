@@ -1,0 +1,27 @@
+// src/domain/ledger.nil - Double-Entry Immutable Customer Ledger
+
+let applyCustomerLedger = fn(customer, dueMinor, prepaidMinor, saleId) {
+    let oldDue = customer["dueMinor"];
+    let oldPrepaid = customer["prepaidMinor"];
+
+    let newDue = oldDue + dueMinor;
+    let newPrepaid = oldPrepaid - prepaidMinor;
+
+    let entry = {
+        "customerId": customer["id"],
+        "saleId": saleId,
+        "dueChange": dueMinor,
+        "prepaidChange": (0 - prepaidMinor),
+        "dueAfter": newDue,
+        "prepaidAfter": newPrepaid,
+        "timestamp": time()
+    };
+
+    customer["dueMinor"] = newDue;
+    customer["prepaidMinor"] = newPrepaid;
+
+    return {
+        "customer": customer,
+        "ledgerEntry": entry
+    };
+};

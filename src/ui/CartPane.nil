@@ -1,0 +1,214 @@
+// src/ui/CartPane.nil - Multi-tab POS Cart Terminal Component (NilLang Alap)
+import { Column, Row, Text, Input, Button, Card, LazyList, Spacer } from "alap/ui";
+
+component CartPane {
+    prop activeTab: string = "tab-1";
+    prop cartItems: any[] = [];
+    prop customers: any[] = [];
+    @State selectedCustomerId: string = "walk-in";
+    @State subtotalMinor: i64 = 0;
+    @State discountMinor: i64 = 0;
+    @State taxMinor: i64 = 0;
+    @State grandTotalMinor: i64 = 0;
+
+    build() {
+        Column {
+            // Multi-Tab Switcher
+            Row {
+                Button("হিসাব ১ (F6)")
+                    .variant(activeTab == "tab-1" ? "tab-active" : "tab")
+                    .onClick => { this.emit("switchTab", "tab-1"); }
+
+                Button("হিসাব ২ (F7)")
+                    .variant(activeTab == "tab-2" ? "tab-active" : "tab")
+                    .onClick => { this.emit("switchTab", "tab-2"); }
+
+                Button("হিসাব ৩ (F8)")
+                    .variant(activeTab == "tab-3" ? "tab-active" : "tab")
+                    .onClick => { this.emit("switchTab", "tab-3"); }
+
+                Spacer()
+
+                Button("🗑️ খালি করুন") {
+                    onClick => {
+                        this.emit("clearCart");
+                    }
+                }
+                .variant("danger-text")
+            }
+            .padding({ horizontal: 16, top: 12, bottom: 8 })
+            .border({ bottom: 1, color: "rgba(255,255,255,0.06)" })
+
+            // Customer Selector & Due balance
+            Row {
+                Text("👤")
+                    .fontSize(16)
+                    .margin({ right: 8 })
+
+                Column {
+                    Text("গ্রাহক নির্বাচন")
+                        .fontSize(11)
+                        .color("#94a3b8")
+                    
+                    // Customer Select Box
+                    Text(this.getCustomerLabel(selectedCustomerId))
+                        .id("customerSelectDisplay")
+                        .fontSize(13)
+                        .fontWeight("600")
+                        .color("#00d4ff")
+                }
+                .flex(1)
+
+                Button("বাকি খাতা") {
+                    onClick => {
+                        this.emit("viewCustomerLedger", selectedCustomerId);
+                    }
+                }
+                .variant("outline")
+                .size("sm")
+            }
+            .padding({ horizontal: 16, vertical: 10 })
+            .backgroundColor("#161622")
+            .margin({ horizontal: 12, top: 8 })
+            .borderRadius(8)
+
+            // Cart Items Table / List
+            Column {
+                // Table header
+                Row {
+                    Text("পণ্য").width("45%").fontSize(11).color("#64748b").fontWeight("600")
+                    Text("পরিমাণ").width("25%").fontSize(11).color("#64748b").fontWeight("600").textAlign("center")
+                    Text("মোট").width("20%").fontSize(11).color("#64748b").fontWeight("600").textAlign("right")
+                    Text("").width("10%")
+                }
+                .padding({ horizontal: 16, vertical: 8 })
+                .border({ bottom: 1, color: "rgba(255,255,255,0.04)" })
+
+                // Items list
+                LazyList {
+                    id: "cartItemList",
+                    items: cartItems,
+                    render: (item) => {
+                        Row {
+                            Column {
+                                Text(item.name)
+                                    .fontSize(13)
+                                    .fontWeight("600")
+                                    .color("#f1f5f9")
+                                Text(item.unitPriceFormatted)
+                                    .fontSize(11)
+                                    .color("#94a3b8")
+                            }
+                            .width("45%")
+
+                            // Quantity modifier buttons
+                            Row {
+                                Button("－") {
+                                    onClick => { this.emit("updateQty", item.productId, -1); }
+                                }
+                                .variant("qty-btn")
+
+                                Text(item.qty.toString())
+                                    .fontSize(13)
+                                    .fontWeight("bold")
+                                    .padding({ horizontal: 8 })
+
+                                Button("＋") {
+                                    onClick => { this.emit("updateQty", item.productId, 1); }
+                                }
+                                .variant("qty-btn")
+                            }
+                            .width("25%")
+                            .alignItems("center")
+                            .justifyContent("center")
+
+                            Text(item.lineTotalFormatted)
+                                .width("20%")
+                                .fontSize(13)
+                                .fontWeight("700")
+                                .color("#00d4ff")
+                                .textAlign("right")
+
+                            Button("✕") {
+                                onClick => { this.emit("removeItem", item.productId); }
+                            }
+                            .width("10%")
+                            .variant("icon-danger")
+                        }
+                        .padding({ horizontal: 16, vertical: 10 })
+                        .border({ bottom: 1, color: "rgba(255,255,255,0.03)" })
+                    }
+                }
+                .grow()
+            }
+            .grow()
+
+            // Pricing Summary & Checkout Bar
+            Column {
+                Row {
+                    Text("সাবটোটাল").fontSize(13).color("#94a3b8")
+                    Spacer()
+                    Text(this.formatMoney(subtotalMinor)).id("subtotalDisplay").fontSize(13).color("#e2e8f0")
+                }
+                .padding({ horizontal: 16, vertical: 4 })
+
+                Row {
+                    Text("ছাড় / ডিসকাউন্ট (৳)").fontSize(13).color("#94a3b8")
+                    Spacer()
+                    Input(discountMinor > 0 ? (discountMinor / 100).toString() : "0")
+                        .id("discountInput")
+                        .width(90)
+                        .fontSize(12)
+                        .textAlign("right")
+                        .onInput => (v) { this.emit("changeDiscount", v); }
+                }
+                .padding({ horizontal: 16, vertical: 4 })
+
+                Row {
+                    Text("ভ্যাট / ট্যাক্স (৫%)").fontSize(13).color("#94a3b8")
+                    Spacer()
+                    Text(this.formatMoney(taxMinor)).id("taxDisplay").fontSize(13).color("#e2e8f0")
+                }
+                .padding({ horizontal: 16, vertical: 4 })
+
+                Row {
+                    Text("সর্বমোট প্রদেয়")
+                        .fontSize(16)
+                        .fontWeight("bold")
+                        .color("#f8fafc")
+                    Spacer()
+                    Text(this.formatMoney(grandTotalMinor))
+                        .id("grandTotalDisplay")
+                        .fontSize(22)
+                        .fontWeight("800")
+                        .color("#10b981")
+                }
+                .padding({ horizontal: 16, top: 10, bottom: 12 })
+                .border({ top: 1, color: "rgba(255,255,255,0.08)" })
+
+                Button("💳 F4 চেকআউট ও পেমেন্ট") {
+                    onClick => {
+                        this.emit("openCheckout");
+                    }
+                }
+                .id("btnCheckout")
+                .variant("checkout-primary")
+                .width("100%")
+                .disabled(cartItems.length == 0)
+            }
+            .padding(16)
+            .backgroundColor("#13131e")
+            .border({ top: 1, color: "rgba(255,255,255,0.08)" })
+        }
+        .width("40%")
+        .backgroundColor("#0f172a")
+    }
+
+    func formatMoney(minor: i64): string {
+        return "৳" + (minor / 100).toString() + "." + (minor % 100).toString();
+    }
+
+    func getCustomerLabel(id: string): string {
+        return id == "walk-in" ? "সাধারণ ক্রেতা (নগদ)" : id;
+    }
+}

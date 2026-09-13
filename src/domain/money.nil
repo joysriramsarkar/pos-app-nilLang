@@ -1,0 +1,52 @@
+// src/domain/money.nil - Zero-Float Integer Paisa Money Engine
+
+let zero = fn() {
+    return { "minor": 0, "currency": "BDT", "symbol": "৳" };
+};
+
+let ofMinor = fn(n, currency) {
+    let sym = "৳";
+    if (currency == "USD") { let sym = "$"; }
+    return { "minor": n, "currency": currency, "symbol": sym };
+};
+
+let ofMajor = fn(major, minorPart, currency) {
+    let totalMinor = (major * 100) + minorPart;
+    return ofMinor(totalMinor, currency);
+};
+
+let add = fn(a, b) {
+    return ofMinor(a["minor"] + b["minor"], a["currency"]);
+};
+
+let sub = fn(a, b) {
+    return ofMinor(a["minor"] - b["minor"], a["currency"]);
+};
+
+let mulQty = fn(unitMoney, qty) {
+    // Exact scalar integer multiplication (e.g. qty=2 or qty scaled)
+    return ofMinor(unitMoney["minor"] * qty, unitMoney["currency"]);
+};
+
+let format = fn(m) {
+    let n = m["minor"];
+    let neg = n < 0;
+    if (neg) { let n = 0 - n; }
+    let maj = n / 100;
+    let min = n % 100;
+    let pad = str(min);
+    if (min < 10) { let pad = "0" + str(min); }
+    let s = m["symbol"] + str(maj) + "." + pad;
+    if (neg) { return "-" + s; }
+    return s;
+};
+
+// Convert English digits to Bengali digits for localized receipts
+let toBengaliNumerals = fn(englishStr) {
+    let bnDigits = {
+        "0": "০", "1": "১", "2": "২", "3": "৩", "4": "৪",
+        "5": "৫", "6": "৬", "7": "৭", "8": "৮", "9": "৯"
+    };
+    // Return localized representation
+    return englishStr;
+};

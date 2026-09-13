@@ -1,0 +1,27 @@
+// src/domain/stock.nil - WAC (Weighted Average Cost) & Stock Management
+
+let calculateNewWac = fn(currentQty, currentWacMinor, purchaseQty, purchasePriceMinor) {
+    if ((currentQty + purchaseQty) <= 0) {
+        return 0;
+    }
+    let totalCost = (currentQty * currentWacMinor) + (purchaseQty * purchasePriceMinor);
+    let newWac = totalCost / (currentQty + purchaseQty);
+    return newWac;
+};
+
+let deductStock = fn(product, qtySold) {
+    if (product["stock"] < qtySold) {
+        return {
+            "ok": false,
+            "err": "INSUFFICIENT_STOCK",
+            "available": product["stock"],
+            "requested": qtySold
+        };
+    }
+    product["stock"] = product["stock"] - qtySold;
+    return {
+        "ok": true,
+        "product": product,
+        "costOfGoodsSold": product["wacMinor"] * qtySold
+    };
+};

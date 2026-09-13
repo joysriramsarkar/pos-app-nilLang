@@ -1,0 +1,525 @@
+// src/ui/Modals.nil - Declarative Modal Dialog Components (NilLang Alap)
+import { Column, Row, Text, Input, Button, Card, Spacer } from "alap/ui";
+
+component CheckoutModal {
+    prop isOpen: bool = false;
+    prop totalAmountMinor: i64 = 0;
+    @State cashPaid: i64 = 0;
+    @State mfsPaid: i64 = 0;
+    @State cardPaid: i64 = 0;
+    @State dueAmount: i64 = 0;
+    @State mfsTxId: string = "";
+    @State customerPhone: string = "";
+
+    build() {
+        if (!isOpen) {
+            return null;
+        }
+
+        Column {
+            Card {
+                Column {
+                    // Header
+                    Row {
+                        Text("💳 বিক্রয় সম্পন্ন ও পেমেন্ট গ্রহণ")
+                            .fontSize(18)
+                            .fontWeight("bold")
+                            .color("#f8fafc")
+                        
+                        Spacer()
+
+                        Button("✕") {
+                            onClick => { this.emit("close"); }
+                        }
+                        .variant("icon-ghost")
+                    }
+                    .padding({ bottom: 16 })
+                    .border({ bottom: 1, color: "rgba(255,255,255,0.08)" })
+
+                    // Grand total badge
+                    Row {
+                        Text("মোট প্রদেয় বিল:")
+                            .fontSize(14)
+                            .color("#94a3b8")
+                        Spacer()
+                        Text("৳" + (totalAmountMinor / 100).toString())
+                            .fontSize(24)
+                            .fontWeight("800")
+                            .color("#10b981")
+                    }
+                    .padding(14)
+                    .backgroundColor("#1e293b")
+                    .borderRadius(8)
+                    .margin({ top: 12, bottom: 16 })
+
+                    // Quick Cash Buttons
+                    Row {
+                        Text("দ্রুত নগদ বাটন:").fontSize(12).color("#94a3b8").margin({ right: 8 })
+                        Button("যথাযথ বিল") { onClick => { this.emit("quickCash", "exact"); } }.variant("quick-cash").margin({ right: 4 })
+                        Button("৳৫০০") { onClick => { this.emit("quickCash", 50000); } }.variant("quick-cash").margin({ right: 4 })
+                        Button("৳১,০০০") { onClick => { this.emit("quickCash", 100000); } }.variant("quick-cash").margin({ right: 4 })
+                        Button("৳২,০০০") { onClick => { this.emit("quickCash", 200000); } }.variant("quick-cash").margin({ right: 4 })
+                        Button("৳৫,০০০") { onClick => { this.emit("quickCash", 500000); } }.variant("quick-cash")
+                    }
+                    .margin({ bottom: 12 })
+
+                    // Payment inputs (Cash, MFS bKash/Nagad, Card, Due)
+                    Column {
+                        // Cash
+                        Row {
+                            Text("💵 নগদ গ্রহণ (Cash):").width("40%").fontSize(13).color("#e2e8f0")
+                            Input("0")
+                                .id("payCashInput")
+                                .flex(1)
+                                .textAlign("right")
+                                .onInput => (v) { this.emit("updateCash", v); }
+                        }
+                        .margin({ bottom: 10 })
+
+                        // MFS
+                        Row {
+                            Text("📱 বিকাশ / নগদ (MFS):").width("40%").fontSize(13).color("#e2e8f0")
+                            Input("0")
+                                .id("payMFSInput")
+                                .flex(1)
+                                .textAlign("right")
+                                .onInput => (v) { this.emit("updateMFS", v); }
+                        }
+                        .margin({ bottom: 10 })
+
+                        // Card
+                        Row {
+                            Text("💳 ব্যাংক কার্ড (POS):").width("40%").fontSize(13).color("#e2e8f0")
+                            Input("0")
+                                .id("payCardInput")
+                                .flex(1)
+                                .textAlign("right")
+                                .onInput => (v) { this.emit("updateCard", v); }
+                        }
+                        .margin({ bottom: 10 })
+
+                        // Due
+                        Row {
+                            Text("📝 বাকি হিসাব (Due):").width("40%").fontSize(13).color("#f59e0b")
+                            Input("0")
+                                .id("payDueInput")
+                                .flex(1)
+                                .textAlign("right")
+                                .onInput => (v) { this.emit("updateDue", v); }
+                        }
+                        .margin({ bottom: 10 })
+                    }
+
+                    // Change return / Due alert
+                    Row {
+                        Text("ফেরত দিন (Change):")
+                            .fontSize(14)
+                            .fontWeight("600")
+                            .color("#94a3b8")
+                        Spacer()
+                        Text("৳0.00")
+                            .id("changeReturnDisplay")
+                            .fontSize(18)
+                            .fontWeight("bold")
+                            .color("#38bdf8")
+                    }
+                    .padding(12)
+                    .border({ top: 1, color: "rgba(255,255,255,0.06)" })
+                    .margin({ top: 10, bottom: 16 })
+
+                    // Actions
+                    Row {
+                        Button("বাতিল করুন") {
+                            onClick => { this.emit("close"); }
+                        }
+                        .variant("secondary")
+                        .flex(1)
+                        .margin({ right: 10 })
+
+                        Button("✅ নিশ্চিত করুন ও রসিদ দিন (Enter)") {
+                            onClick => { this.emit("confirmPayment"); }
+                        }
+                        .id("btnConfirmCheckout")
+                        .variant("primary")
+                        .flex(2)
+                    }
+                }
+                .padding(24)
+                .width(520)
+            }
+            .backgroundColor("#161622")
+            .borderRadius(14)
+            .border({ width: 1, color: "rgba(255,255,255,0.12)" })
+        }
+        .modalBackdrop()
+    }
+}
+
+component DailyReportModal {
+    prop isOpen: bool = false;
+    prop reportData: any = null;
+
+    build() {
+        if (!isOpen) {
+            return null;
+        }
+
+        Column {
+            Card {
+                Column {
+                    Row {
+                        Text("📊 দৈনিক বিক্রয় ও লাভ-লোকসান রিপোর্ট")
+                            .fontSize(18)
+                            .fontWeight("bold")
+                            .color("#f8fafc")
+                        Spacer()
+                        Button("✕") { onClick => { this.emit("close"); } }.variant("icon-ghost")
+                    }
+                    .padding({ bottom: 16 })
+                    .border({ bottom: 1, color: "rgba(255,255,255,0.08)" })
+
+                    // Metrics cards
+                    Row {
+                        Column {
+                            Text("মোট বিক্রয়").fontSize(11).color("#94a3b8")
+                            Text("৳০.০০").id("reportTotalSales").fontSize(18).fontWeight("bold").color("#10b981")
+                        }
+                        .padding(12).backgroundColor("#1e293b").borderRadius(8).flex(1).margin({ right: 8 })
+
+                        Column {
+                            Text("লাভ (WAC Profit)").fontSize(11).color("#94a3b8")
+                            Text("৳০.০০").id("reportTotalProfit").fontSize(18).fontWeight("bold").color("#00d4ff")
+                        }
+                        .padding(12).backgroundColor("#1e293b").borderRadius(8).flex(1).margin({ right: 8 })
+
+                        Column {
+                            Text("মোট অর্ডার").fontSize(11).color("#94a3b8")
+                            Text("০ টি").id("reportOrderCount").fontSize(18).fontWeight("bold").color("#f8fafc")
+                        }
+                        .padding(12).backgroundColor("#1e293b").borderRadius(8).flex(1).margin({ right: 8 })
+
+                        Column {
+                            Text("মজুদ মূল্য").fontSize(11).color("#94a3b8")
+                            Text("৳০.০০").id("reportInventoryValuation").fontSize(18).fontWeight("bold").color("#a855f7")
+                        }
+                        .padding(12).backgroundColor("#1e293b").borderRadius(8).flex(1)
+                    }
+                    .margin({ top: 16, bottom: 20 })
+
+                    // Payment breakdown
+                    Column {
+                        Text("পেমেন্ট মেথড বিবরণ:").fontSize(13).color("#cbd5e1").margin({ bottom: 8 })
+                    }
+                    .id("reportPaymentsSummary")
+
+                    Row {
+                        Button("📥 CSV রিপোর্ট ডাউনলোড") {
+                            onClick => { this.emit("exportCsv"); }
+                        }
+                        .variant("secondary")
+                        .margin({ right: 8 })
+
+                        Button("বন্ধ করুন") { onClick => { this.emit("close"); } }.variant("primary")
+                    }
+                    .margin({ top: 8 })
+                }
+                .padding(24)
+                .width(560)
+            }
+        }
+        .modalBackdrop()
+    }
+}
+
+component StockModal {
+    prop isOpen: bool = false;
+    prop products: any[] = [];
+
+    build() {
+        if (!isOpen) {
+            return null;
+        }
+
+        Column {
+            Card {
+                Column {
+                    Row {
+                        Text("📦 স্টক ব্যবস্থাপনা ও পণ্য ক্রয়")
+                            .fontSize(18)
+                            .fontWeight("bold")
+                            .color("#f8fafc")
+                        Spacer()
+                        Button("✕") { onClick => { this.emit("close"); } }.variant("icon-ghost")
+                    }
+                    .padding({ bottom: 16 })
+                    .border({ bottom: 1, color: "rgba(255,255,255,0.08)" })
+
+                    Text("নতুন স্টক যোগ বা সমন্বয় করুন")
+                        .fontSize(14)
+                        .fontWeight("600")
+                        .color("#cbd5e1")
+                        .margin({ bottom: 12 })
+
+                    Column {
+                        Row {
+                            Text("পণ্য নির্বাচন করুন:").width("40%").fontSize(13).color("#e2e8f0")
+                            // ProductSelect rendered dynamically
+                            Text("").id("adjustProductSelect").flex(1)
+                        }
+                        .margin({ bottom: 10 })
+
+                        Row {
+                            Text("যোগ করার পরিমাণ (+):").width("40%").fontSize(13).color("#e2e8f0")
+                            Input("10")
+                                .id("adjustQtyInput")
+                                .flex(1)
+                                .textAlign("right")
+                        }
+                        .margin({ bottom: 10 })
+
+                        Row {
+                            Text("ক্রয় মূল্য প্রতি একক (৳):").width("40%").fontSize(13).color("#e2e8f0")
+                            Input("")
+                                .id("adjustCostInput")
+                                .flex(1)
+                                .placeholder("ঐচ্ছিক (WAC গণনায়)")
+                                .textAlign("right")
+                        }
+                        .margin({ bottom: 10 })
+
+                        Row {
+                            Text("সমন্বয়ের কারণ:").width("40%").fontSize(13).color("#e2e8f0")
+                            Input("নতুন চালান ক্রয়")
+                                .id("adjustReasonInput")
+                                .flex(1)
+                        }
+                        .margin({ bottom: 16 })
+                    }
+
+                    Button("📥 স্টক আপডেট করুন") {
+                        onClick => { this.emit("submitAdjust"); }
+                    }
+                    .variant("primary")
+                    .width("100%")
+
+                    Button("বন্ধ করুন") { onClick => { this.emit("close"); } }
+                        .variant("secondary")
+                        .width("100%")
+                        .margin({ top: 8 })
+                }
+                .padding(24)
+                .width(480)
+            }
+        }
+        .modalBackdrop()
+    }
+}
+
+component CustomerModal {
+    prop isOpen: bool = false;
+    prop customers: any[] = [];
+
+    build() {
+        if (!isOpen) {
+            return null;
+        }
+
+        Column {
+            Card {
+                Column {
+                    Row {
+                        Text("👥 গ্রাহক খতিয়ান ও বাকি পরিষদ")
+                            .fontSize(18)
+                            .fontWeight("bold")
+                            .color("#f8fafc")
+                        Spacer()
+                        Button("✕") { onClick => { this.emit("close"); } }.variant("icon-ghost")
+                    }
+                    .padding({ bottom: 16 })
+                    .border({ bottom: 1, color: "rgba(255,255,255,0.08)" })
+
+                    Text("বাকি টাকা গ্রহণ করুন")
+                        .fontSize(14)
+                        .fontWeight("600")
+                        .color("#cbd5e1")
+                        .margin({ bottom: 12 })
+
+                    Column {
+                        Row {
+                            Text("গ্রাহক:").width("35%").fontSize(13).color("#e2e8f0")
+                            Text("").id("duePayCustomerSelect").flex(1)
+                        }
+                        .margin({ bottom: 10 })
+
+                        Row {
+                            Text("পরিশোধের পরিমাণ (৳):").width("35%").fontSize(13).color("#e2e8f0")
+                            Input("")
+                                .id("duePayAmountInput")
+                                .flex(1)
+                                .placeholder("৳ পরিমাণ")
+                                .textAlign("right")
+                        }
+                        .margin({ bottom: 10 })
+
+                        Row {
+                            Text("পেমেন্ট মাধ্যম:").width("35%").fontSize(13).color("#e2e8f0")
+                            Text("").id("duePayMethodSelect").flex(1)
+                        }
+                        .margin({ bottom: 10 })
+
+                        Row {
+                            Text("রেফারেন্স / নোট:").width("35%").fontSize(13).color("#e2e8f0")
+                            Input("")
+                                .id("duePayRefInput")
+                                .flex(1)
+                                .placeholder("রসিদ নম্বর বা নোট")
+                        }
+                        .margin({ bottom: 16 })
+                    }
+
+                    Button("✅ বাকি টাকা জমা নিন") {
+                        onClick => { this.emit("submitDuePayment"); }
+                    }
+                    .variant("primary")
+                    .width("100%")
+
+                    Button("বন্ধ করুন") { onClick => { this.emit("close"); } }
+                        .variant("secondary")
+                        .width("100%")
+                        .margin({ top: 8 })
+                }
+                .padding(24)
+                .width(480)
+            }
+        }
+        .modalBackdrop()
+    }
+}
+
+component ShiftModal {
+    prop isOpen: bool = false;
+
+    build() {
+        if (!isOpen) {
+            return null;
+        }
+
+        Column {
+            Card {
+                Column {
+                    Row {
+                        Text("🔄 শিফট ও রেজিস্টার ক্যাশ ব্যবস্থাপনা")
+                            .fontSize(18)
+                            .fontWeight("bold")
+                            .color("#f8fafc")
+                        Spacer()
+                        Button("✕") { onClick => { this.emit("close"); } }.variant("icon-ghost")
+                    }
+                    .padding({ bottom: 16 })
+                    .border({ bottom: 1, color: "rgba(255,255,255,0.08)" })
+
+                    // Shift info dynamically populated
+                    Column {}
+                        .id("shiftInfoBody")
+                        .margin({ bottom: 16 })
+
+                    // Close shift section
+                    Column {
+                        Text("শিফট সমাপ্ত ও ড্রয়ার ক্যাশ গণনা")
+                            .fontSize(14)
+                            .fontWeight("600")
+                            .color("#f59e0b")
+                            .margin({ bottom: 10 })
+
+                        Row {
+                            Text("ড্রয়ারে গণনাকৃত নগদ (৳):").width("45%").fontSize(13).color("#e2e8f0")
+                            Input("")
+                                .id("closeShiftActualCash")
+                                .flex(1)
+                                .placeholder("গণনাকৃত নগদ টাকা")
+                                .textAlign("right")
+                        }
+                        .margin({ bottom: 8 })
+
+                        Row {
+                            Text("সমাপ্তি নোট:").width("45%").fontSize(13).color("#e2e8f0")
+                            Input("")
+                                .id("closeShiftNotes")
+                                .flex(1)
+                                .placeholder("শিফট নোট বা মন্তব্য")
+                        }
+                        .margin({ bottom: 12 })
+
+                        Button("🔒 শিফট বন্ধ করুন") {
+                            onClick => { this.emit("confirmCloseShift"); }
+                        }
+                        .variant("danger")
+                        .width("100%")
+                    }
+                    .padding(16)
+                    .backgroundColor("rgba(245,158,11,0.05)")
+                    .borderRadius(8)
+                    .border({ width: 1, color: "rgba(245,158,11,0.2)" })
+
+                    Button("বন্ধ করুন") { onClick => { this.emit("close"); } }
+                        .variant("secondary")
+                        .width("100%")
+                        .margin({ top: 12 })
+                }
+                .padding(24)
+                .width(480)
+            }
+        }
+        .modalBackdrop()
+    }
+}
+
+component SyncModal {
+    prop isOpen: bool = false;
+
+    build() {
+        if (!isOpen) {
+            return null;
+        }
+
+        Column {
+            Card {
+                Column {
+                    Row {
+                        Text("⚡ অফলাইন ট্রানজ্যাকশন সিঙ্ক কিউ")
+                            .fontSize(18)
+                            .fontWeight("bold")
+                            .color("#f8fafc")
+                        Spacer()
+                        Button("✕") { onClick => { this.emit("close"); } }.variant("icon-ghost")
+                    }
+                    .padding({ bottom: 16 })
+                    .border({ bottom: 1, color: "rgba(255,255,255,0.08)" })
+
+                    Text("ইন্টারনেট না থাকলেও সমস্ত বিক্রয় অফলাইনে নিরাপদে সংরক্ষিত রয়েছে।")
+                        .id("syncStatusSummary")
+                        .fontSize(13)
+                        .color("#94a3b8")
+                        .margin({ bottom: 12 })
+
+                    Column {}
+                        .id("syncQueueList")
+
+                    Row {
+                        Button("🔄 সার্ভারে সিঙ্ক করুন") {
+                            onClick => { this.emit("forceSync"); }
+                        }
+                        .variant("primary")
+                        .margin({ right: 8 })
+
+                        Button("বন্ধ করুন") { onClick => { this.emit("close"); } }.variant("secondary")
+                    }
+                    .margin({ top: 12 })
+                }
+                .padding(24)
+                .width(480)
+            }
+        }
+        .modalBackdrop()
+    }
+}

@@ -1,0 +1,925 @@
+<!DOCTYPE html>
+<html lang="bn">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Lakhan Bhandar POS - লক্ষণ ভাণ্ডার</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Hind+Siliguri:wght@400;500;600;700&family=Outfit:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/style.css">
+</head>
+<body class="pos-app-body">
+
+  <!-- ─── 1. LEFT SIDEBAR NAVIGATION ─── -->
+  <nav class="pos-sidebar" id="posSidebar">
+    <!-- Brand Header -->
+    <div class="sidebar-brand">
+      <div class="sidebar-brand-logo">🏪</div>
+      <div>
+        <div class="sidebar-brand-name">Lakhan Bhandar</div>
+        <div class="sidebar-brand-sub">লক্ষণ ভাণ্ডার</div>
+      </div>
+      <button class="sidebar-bell-btn" title="বিজ্ঞপ্তি" onclick="showToast('🔔 ১৪টি নতুন আপডেট রয়েছে')">
+        🔔
+        <span class="sidebar-bell-badge">14</span>
+      </button>
+    </div>
+
+    <!-- Navigation Menu Items -->
+    <ul class="sidebar-nav">
+      <li class="nav-item" data-view="dashboard" onclick="showView('dashboard')">
+        <span class="nav-icon">⊞</span><span>ড্যাশবোর্ড</span>
+      </li>
+      <li class="nav-item active" data-view="billing" onclick="showView('billing')">
+        <span class="nav-icon">🛒</span><span>বিলিং</span>
+        <span class="nav-arrow">›</span>
+      </li>
+      <li class="nav-item" data-view="stock" onclick="showView('stock')">
+        <span class="nav-icon">📦</span><span>স্টক</span>
+      </li>
+      <li class="nav-item" data-view="suppliers" onclick="showView('suppliers')">
+        <span class="nav-icon">👥</span><span>পার্টিজের নাম</span>
+      </li>
+      <li class="nav-item" data-view="due-settlement" onclick="showView('due-settlement')">
+        <span class="nav-icon">₹</span><span>পূর্বের বকেয়া শোধ</span>
+      </li>
+      <li class="nav-item" data-view="reports" onclick="showView('reports')">
+        <span class="nav-icon">📄</span><span>রিপোর্ট</span>
+      </li>
+      <li class="nav-item" data-view="transactions" onclick="showView('transactions')">
+        <span class="nav-icon">🕒</span><span>লেনদেন</span>
+      </li>
+      <li class="nav-item" data-view="expenses" onclick="showView('expenses')">
+        <span class="nav-icon">💵</span><span>খরচ</span>
+      </li>
+      <li class="nav-item" data-view="settings" onclick="showView('settings')">
+        <span class="nav-icon">⚙️</span><span>সেটিংস</span>
+      </li>
+      <li class="nav-item" data-view="audit" onclick="showView('audit')">
+        <span class="nav-icon">📋</span><span>অডিট লগ</span>
+      </li>
+      <li class="nav-item" data-view="purchase-orders" onclick="showView('purchase-orders')">
+        <span class="nav-icon">🚚</span><span>ক্রয় অর্ডার</span>
+      </li>
+    </ul>
+
+    <!-- Bottom Profile & Status -->
+    <div class="sidebar-footer">
+      <div class="sidebar-user">
+        <div class="user-avatar">A</div>
+        <div class="user-info">
+          <div class="user-name">Administrator</div>
+          <div class="user-role">ADMIN</div>
+        </div>
+      </div>
+      <div class="sidebar-actions-row">
+        <div>
+          <button class="sidebar-btn-icon" title="Theme Toggle" onclick="toggleTheme()">☾</button>
+          <button class="sidebar-btn-icon" title="Font Scale" onclick="toggleFontScale()">A/A</button>
+        </div>
+        <button class="btn-logout" onclick="showToast('সিস্টেম থেকে লগ আউট সম্পন্ন')">লগ আউট</button>
+      </div>
+      <div class="sidebar-online-status">
+        <span class="dot-online" id="statusDot"></span>
+        <span id="onlineStatusLabel">Online</span>
+      </div>
+    </div>
+  </nav>
+
+  <!-- ─── 2. MAIN CONTENT AREA ─── -->
+  <div class="main-area" id="alap-root" data-alap-component="POSApp">
+
+    <!-- ════════════════════ VIEW: BILLING (DEFAULT POS) ════════════════════ -->
+    <section class="app-view active" id="view-billing">
+      <div class="pos-workspace">
+
+        <!-- CENTER: Catalog & Scanner -->
+        <section class="pane-catalog" data-alap-component="CatalogPane">
+          <!-- Search Bar -->
+          <div class="catalog-top-bar">
+            <div class="scanner-search-bar">
+              <div class="search-input-wrapper">
+                <span class="search-icon">🔍</span>
+                <input type="text" id="barcodeSearchInput" class="input-search"
+                       placeholder="নাম বা বারকোড দিয়ে খুঁজুন... (F2)" autocomplete="off" autofocus>
+                <button class="search-clear-btn" id="clearSearchBtn" style="display:none">✕</button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Category Filter Pills -->
+          <div class="category-tabs" id="categoryTabsBar">
+            <button class="cat-pill active" data-alap-cat="all">সব</button>
+            <button class="cat-pill" data-alap-cat="cat-beverages">Beverages</button>
+            <button class="cat-pill" data-alap-cat="cat-confectionery">Confectionery</button>
+            <button class="cat-pill" data-alap-cat="cat-dairy">Dairy & Frozen</button>
+            <button class="cat-pill" data-alap-cat="cat-general">General</button>
+            <button class="cat-pill" data-alap-cat="cat-groceries">Groceries</button>
+            <button class="cat-pill" data-alap-cat="cat-cleaning">Household & Cleaning</button>
+            <button class="cat-pill" data-alap-cat="cat-snacks">Packaged Snacks</button>
+            <button class="cat-pill" data-alap-cat="cat-personal">Personal Care</button>
+          </div>
+
+          <!-- Sub Filter Bar -->
+          <div class="catalog-sub-bar">
+            <div class="product-count-badge" id="productCountBadge">৭৪টি পণ্য</div>
+            <div class="grid-view-toggles">
+              <button class="view-toggle-btn active" title="গ্রিড ভিউ">⊞</button>
+              <button class="view-toggle-btn" title="তালিকা ভিউ">☰</button>
+            </div>
+          </div>
+
+          <!-- Product Grid -->
+          <div class="product-grid" id="productGrid">
+            <!-- Dynamic products injected by alap-runtime.js -->
+          </div>
+        </section>
+
+        <!-- RIGHT: Cart Drawer / Terminal -->
+        <section class="pane-terminal" data-alap-component="CartPane">
+          <!-- Bill Tabs -->
+          <div class="cart-tabs-bar">
+            <div class="cart-tabs-group">
+              <button class="tab-btn active" data-alap-action="tab" data-tab="tab-1" data-alap-tab="tab-1">
+                Bill 1
+              </button>
+              <button class="tab-btn" data-alap-action="tab" data-tab="tab-2" data-alap-tab="tab-2">
+                Bill 2
+              </button>
+              <button class="tab-btn" data-alap-action="tab" data-tab="tab-3" data-alap-tab="tab-3">
+                Bill 3
+              </button>
+            </div>
+            <button class="tab-add-btn" title="নতুন বিল যোগ করুন" onclick="alap.newBill()">+</button>
+          </div>
+
+          <!-- Cart Header -->
+          <div class="cart-top-header">
+            <div class="cart-title-wrap">
+              <span class="cart-title-icon">🛒</span>
+              <span class="cart-title-text">কার্ট</span>
+              <span class="cart-count-pill" id="cartCountBadge">০টি পণ্য</span>
+            </div>
+            <button class="btn-clear-cart" data-alap-action="clear-cart" title="কার্ট মুছুন">
+              🗑️ মুছুন
+            </button>
+          </div>
+
+          <!-- Customer Bar -->
+          <div class="customer-bar">
+            <div class="customer-select-wrap">
+              <span class="cust-icon">👤</span>
+              <select id="customerSelect" class="customer-dropdown"></select>
+            </div>
+          </div>
+
+          <!-- Cart Items Container -->
+          <div class="cart-table-wrapper" id="cartItemList">
+            <div class="empty-cart-state">
+              <span class="empty-icon">🛒</span>
+              <p>কার্ট খালি। বাম পাশ থেকে পণ্য নির্বাচন করুন।</p>
+            </div>
+          </div>
+
+          <!-- Cart Summary & Checkout -->
+          <div class="cart-summary-panel">
+            <!-- Payment Methods Row -->
+            <div class="payment-methods-box">
+              <span class="pay-section-lbl">পেমেন্ট পদ্ধতি</span>
+              <div class="payment-method-row" id="paymentMethodRow">
+                <button class="pay-method-btn active" data-method="cash" title="নগদ">
+                  <span class="pay-icon">💵</span><span>নগদ</span>
+                </button>
+                <button class="pay-method-btn" data-method="mfs" title="ইউপিআই">
+                  <span class="pay-icon">📱</span><span>ইউপিআই</span>
+                </button>
+                <button class="pay-method-btn" data-method="card" title="মিশ্র">
+                  <span class="pay-icon">💳</span><span>মিশ্র</span>
+                </button>
+                <button class="pay-method-btn" data-method="due" title="বাকি পেমেন্ট">
+                  <span class="pay-icon">⏱️</span><span>বাকি পেমেন্ট</span>
+                </button>
+              </div>
+            </div>
+
+            <div class="summary-line">
+              <span class="summary-lbl">উপমোট</span>
+              <span class="summary-val" id="subtotalDisplay">₹০.০০</span>
+            </div>
+
+            <div class="summary-line grand-total-line">
+              <span class="grand-lbl">মোট</span>
+              <span class="grand-val" id="grandTotalDisplay">₹০.০০</span>
+            </div>
+
+            <button id="btnCheckout" class="btn-checkout-action" data-alap-action="open-checkout" disabled>
+              💳 চেকআউট সম্পন্ন করুন
+            </button>
+          </div>
+        </section>
+      </div>
+    </section>
+
+    <!-- ════════════════════ VIEW: DASHBOARD ════════════════════ -->
+    <section class="app-view" id="view-dashboard">
+      <div class="view-content">
+        <div class="view-page-header">
+          <h2>⊞ ড্যাশবোর্ড (Dashboard Overview)</h2>
+          <button class="btn btn-glass" onclick="loadDashboard()">🔄 রিফ্রেশ</button>
+        </div>
+        <div class="dashboard-stats-grid" id="dashboardStatsGrid">
+          <div class="dashboard-stat-card">
+            <span class="stat-lbl">আজকের বিক্রয়</span>
+            <strong class="stat-val" id="dash-totalSales" style="color:#10b981">লোড হচ্ছে...</strong>
+            <span class="stat-change" id="dash-totalTx"></span>
+          </div>
+          <div class="dashboard-stat-card">
+            <span class="stat-lbl">মোট লাভ (Gross)</span>
+            <strong class="stat-val" id="dash-grossProfit" style="color:#0284c7">—</strong>
+            <span class="stat-change">COGS বাদে</span>
+          </div>
+          <div class="dashboard-stat-card">
+            <span class="stat-lbl">নেট লাভ</span>
+            <strong class="stat-val" id="dash-netProfit" style="color:#8b5cf6">—</strong>
+            <span class="stat-change">খরচ বাদে</span>
+          </div>
+          <div class="dashboard-stat-card">
+            <span class="stat-lbl">মজুদ পণ্যের মূল্য</span>
+            <strong class="stat-val" id="dash-inventoryValue" style="color:#f59e0b">—</strong>
+            <span class="stat-change" id="dash-lowStock">WAC মূল্যে</span>
+          </div>
+          <div class="dashboard-stat-card">
+            <span class="stat-lbl">গ্রাহক সংখ্যা</span>
+            <strong class="stat-val" id="dash-customers" style="color:#0ea5e9">—</strong>
+            <span class="stat-change" id="dash-customerDue">মোট বাকি: —</span>
+          </div>
+          <div class="dashboard-stat-card">
+            <span class="stat-lbl">সরবরাহকারী</span>
+            <strong class="stat-val" id="dash-suppliers" style="color:#f97316">—</strong>
+            <span class="stat-change">নিবন্ধিত পার্টি</span>
+          </div>
+          <div class="dashboard-stat-card">
+            <span class="stat-lbl">মোট পণ্য</span>
+            <strong class="stat-val" id="dash-products" style="color:#64748b">—</strong>
+            <span class="stat-change" id="dash-lowStockCount">কম স্টক: —</span>
+          </div>
+          <div class="dashboard-stat-card">
+            <span class="stat-lbl">মোট খরচ</span>
+            <strong class="stat-val" id="dash-expenses" style="color:#ef4444">—</strong>
+            <span class="stat-change">দোকান ভাড়া, বেতন ও অন্যান্য</span>
+          </div>
+        </div>
+
+        <div class="view-section-header">
+          <h3>🏆 সাম্প্রতিক লেনদেন (Recent Invoices)</h3>
+        </div>
+        <div class="data-table-wrapper">
+          <table class="data-table" id="dashboardRecentSalesTable">
+            <thead><tr>
+              <th>ইনভয়েস</th><th>গ্রাহক</th><th>তারিখ</th><th>পরিমাণ</th><th>লাভ</th><th>পেমেন্ট</th>
+            </tr></thead>
+            <tbody id="dashboardRecentSalesTbody"><tr><td colspan="6" class="table-empty">লোড হচ্ছে...</td></tr></tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- ════════════════════ VIEW: STOCK ════════════════════ -->
+    <section class="app-view" id="view-stock">
+      <div class="view-content">
+        <div class="view-page-header">
+          <h2>📦 স্টক ব্যবস্থাপনা (Inventory Management)</h2>
+          <div style="display:flex;gap:8px">
+            <input type="text" id="stockSearchInput" class="form-input" placeholder="পণ্য খুঁজুন..." style="width:220px" oninput="filterStockTable(this.value)">
+            <button class="btn btn-primary" onclick="openStockAdjustForm()">+ নতুন স্টক ক্রয়</button>
+          </div>
+        </div>
+
+        <!-- Stock Add Form (collapsible) -->
+        <div class="stock-adjust-form-panel" id="stockAdjustFormPanel" style="display:none">
+          <h4>📥 স্টক সমন্বয় / নতুন চালান ক্রয়</h4>
+          <div class="form-grid">
+            <div class="form-group">
+              <label>পণ্য নির্বাচন:</label>
+              <select id="adjustProductSelect" class="form-input"></select>
+            </div>
+            <div class="form-group">
+              <label>পরিমাণ যোগ (+):</label>
+              <input type="number" id="adjustQtyInput" class="form-input" value="10" min="1">
+            </div>
+            <div class="form-group">
+              <label>ক্রয় মূল্য (₹ প্রতি একক):</label>
+              <input type="number" id="adjustCostInput" class="form-input" placeholder="ঐচ্ছিক">
+            </div>
+            <div class="form-group">
+              <label>কারণ:</label>
+              <input type="text" id="adjustReasonInput" class="form-input" value="নতুন চালান ক্রয়">
+            </div>
+          </div>
+          <div style="display:flex;gap:8px;margin-top:12px">
+            <button class="btn btn-primary" data-alap-action="submit-adjust">✅ স্টক আপডেট করুন</button>
+            <button class="btn btn-secondary" onclick="closeStockAdjustForm()">বাতিল</button>
+          </div>
+        </div>
+
+        <div class="data-table-wrapper">
+          <table class="data-table" id="stockTable">
+            <thead><tr>
+              <th>SKU</th><th>পণ্যের নাম</th><th>বিভাগ</th><th>মজুদ</th><th>বিক্রয় মূল্য</th><th>WAC মূল্য</th><th>মজুদ মূল্য</th><th>স্থিতি</th>
+            </tr></thead>
+            <tbody id="stockTableTbody"><tr><td colspan="8" class="table-empty">লোড হচ্ছে...</td></tr></tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- ════════════════════ VIEW: PARTIES (SUPPLIERS & CUSTOMERS) ════════════════════ -->
+    <section class="app-view" id="view-suppliers">
+      <div class="view-content">
+        <div class="view-page-header">
+          <h2>👥 পার্টিজের নাম (গ্রাহক ও সরবরাহকারী)</h2>
+          <div style="display:flex;gap:8px">
+            <button class="btn btn-secondary" onclick="openAddCustomerModal()">+ নতুন গ্রাহক</button>
+            <button class="btn btn-primary" onclick="document.getElementById('addSupplierForm').style.display='block'">+ নতুন সরবরাহকারী</button>
+          </div>
+        </div>
+
+        <!-- Add Supplier Form -->
+        <div class="stock-adjust-form-panel" id="addSupplierForm" style="display:none">
+          <h4>➕ নতুন সরবরাহকারী / পার্টি যোগ করুন</h4>
+          <div class="form-grid">
+            <div class="form-group">
+              <label>নাম (English):</label>
+              <input type="text" id="newSupplierName" class="form-input" placeholder="Supplier Name">
+            </div>
+            <div class="form-group">
+              <label>নাম (বাংলা):</label>
+              <input type="text" id="newSupplierNameBn" class="form-input" placeholder="সরবরাহকারীর নাম">
+            </div>
+            <div class="form-group">
+              <label>ফোন নম্বর:</label>
+              <input type="text" id="newSupplierPhone" class="form-input" placeholder="01xxx-xxxxxx">
+            </div>
+            <div class="form-group">
+              <label>ঠিকানা:</label>
+              <input type="text" id="newSupplierAddress" class="form-input" placeholder="শহর, জেলা">
+            </div>
+          </div>
+          <div style="display:flex;gap:8px;margin-top:12px">
+            <button class="btn btn-primary" onclick="addSupplier()">✅ সংরক্ষণ করুন</button>
+            <button class="btn btn-secondary" onclick="document.getElementById('addSupplierForm').style.display='none'">বাতিল</button>
+          </div>
+        </div>
+
+        <div class="view-section-header">
+          <h3>🏢 সরবরাহকারী তালিকা (Suppliers)</h3>
+        </div>
+        <div class="data-table-wrapper">
+          <table class="data-table" id="suppliersTable">
+            <thead><tr>
+              <th>ID</th><th>সরবরাহকারীর নাম</th><th>ফোন</th><th>ঠিকানা</th><th>মোট ক্রয়</th><th>বকেয়া দেনা</th><th>অ্যাকশন</th>
+            </tr></thead>
+            <tbody id="suppliersTbody"><tr><td colspan="7" class="table-empty">লোড হচ্ছে...</td></tr></tbody>
+          </table>
+        </div>
+
+        <div class="view-section-header">
+          <h3>👤 নিবন্ধিত গ্রাহক তালিকা (Customers)</h3>
+        </div>
+        <div class="data-table-wrapper">
+          <table class="data-table" id="customersTable">
+            <thead><tr>
+              <th>ID</th><th>গ্রাহকের নাম</th><th>ফোন</th><th>বকেয়া (Due)</th><th>অগ্রিম (Prepaid)</th><th>ক্রেডিট লিমিট</th><th>অ্যাকশন</th>
+            </tr></thead>
+            <tbody id="customersTbody"><tr><td colspan="7" class="table-empty">লোড হচ্ছে...</td></tr></tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- ════════════════════ VIEW: DUE SETTLEMENT ════════════════════ -->
+    <section class="app-view" id="view-due-settlement">
+      <div class="view-content" style="max-width: 1000px; margin: 0 auto; width: 100%;">
+        
+        <!-- ── SUBVIEW 1: CUSTOMER LIST (Default) ── -->
+        <div id="due-view-list" class="due-subview">
+          <div class="view-page-header">
+            <div>
+              <h2>₹ পূর্বের বকেয়া শোধ (Due Collection)</h2>
+              <p class="view-page-subtitle">গ্রাহকদের বকেয়া হিসাব এবং সংগ্রহ ব্যবস্থাপনা</p>
+            </div>
+            <button class="btn btn-outline" onclick="loadDueCollectionList()">🔄 রিফ্রেশ</button>
+          </div>
+
+          <!-- 3 Stat KPI Cards -->
+          <div class="due-kpi-grid">
+            <div class="due-kpi-card orange">
+              <span class="due-kpi-lbl">মোট আদায়যোগ্য বকেয়া</span>
+              <strong class="due-kpi-val text-orange" id="dueTotalCollectable">₹০.০০</strong>
+            </div>
+            <div class="due-kpi-card">
+              <span class="due-kpi-lbl">বকেয়া থাকা গ্রাহক</span>
+              <strong class="due-kpi-val" id="dueCustomersCount">০ জন</strong>
+            </div>
+            <div class="due-kpi-card green">
+              <span class="due-kpi-lbl">আজকের সংগৃহীত</span>
+              <strong class="due-kpi-val text-green" id="dueCollectedToday">₹০.০০</strong>
+            </div>
+          </div>
+
+          <!-- Top Debtors Quick-Pick Section -->
+          <div id="dueTopDebtorsSection" class="top-debtors-section" style="display:none">
+            <div class="top-debtors-header">
+              <span>শীর্ষ বকেয়া (TOP DUES)</span>
+            </div>
+            <div class="top-debtors-track" id="dueTopDebtorsTrack"></div>
+          </div>
+
+          <!-- Search & Sort Filter Bar -->
+          <div class="due-filter-bar">
+            <div class="due-search-box">
+              <span class="search-icon">🔍</span>
+              <input type="text" id="dueSearchInput" class="form-input" placeholder="গ্রাহকের নাম বা ফোন নম্বর দিয়ে খুঁজুন..." oninput="filterDueCustomers()">
+            </div>
+            <div class="due-sort-group">
+              <button class="btn btn-sm btn-sort active" id="sort-due_desc" onclick="setDueSort('due_desc')">📉 বকেয়া ↓</button>
+              <button class="btn btn-sm btn-sort" id="sort-name_asc" onclick="setDueSort('name_asc')">🔤 নাম</button>
+              <button class="btn btn-sm btn-sort" id="sort-oldest" onclick="setDueSort('oldest')">🕒 পুরাতন</button>
+            </div>
+          </div>
+
+          <!-- Customer Cards List -->
+          <div class="due-customers-list" id="dueCustomersList">
+            <div class="due-loading-state">লোড হচ্ছে...</div>
+          </div>
+        </div>
+
+        <!-- ── SUBVIEW 2: COLLECTION FORM ── -->
+        <div id="due-view-form" class="due-subview" style="display:none">
+          <div class="view-page-header">
+            <div style="display:flex;align-items:center;gap:12px">
+              <button class="btn btn-outline" onclick="backToDueList()">← পিছনে</button>
+              <div>
+                <h2>বকেয়া আদায় (Collect Due)</h2>
+                <p class="view-page-subtitle">গ্রাহকের কাছ থেকে বকেয়া টাকা গ্রহণ করুন</p>
+              </div>
+            </div>
+          </div>
+
+          <!-- Selected Customer Profile Card -->
+          <div class="due-selected-customer-card" id="dueSelectedCustomerCard">
+            <div class="due-cust-avatar">👤</div>
+            <div class="due-cust-details">
+              <h3 id="dueFormCustName">গ্রাহকের নাম</h3>
+              <p id="dueFormCustPhone">📞 ফোন নম্বর</p>
+              <span class="due-cust-time" id="dueFormLastDate">🕒 শেষ লেনদেন: আজকে</span>
+            </div>
+            <div class="due-cust-amount-badge">
+              <span class="due-badge-lbl">মোট বকেয়া</span>
+              <strong class="due-badge-val text-orange" id="dueFormTotalDue">₹০.০০</strong>
+            </div>
+          </div>
+
+          <!-- Collection Amount Input Card -->
+          <div class="due-form-card">
+            <div class="form-group">
+              <label class="form-label-bold">পরিশোধের পরিমাণ</label>
+              <div class="due-amount-input-wrap">
+                <span class="due-currency-prefix">₹</span>
+                <input type="text" id="dueInputAmount" class="due-amount-input" placeholder="০" inputmode="decimal" oninput="onDueAmountInput()">
+              </div>
+            </div>
+
+            <!-- Quick Full / Half Action Buttons -->
+            <div class="due-quick-actions">
+              <button class="btn btn-outline flex-1" onclick="setDueAmountFull()">💼 সম্পূর্ণ বকেয়া</button>
+              <button class="btn btn-outline flex-1" onclick="setDueAmountHalf()">✂️ অর্ধেক বকেয়া</button>
+            </div>
+
+            <!-- Quick Cash Chips -->
+            <div class="due-chips-track" id="dueChipsTrack"></div>
+
+            <!-- Remaining Due Live Calculation Box -->
+            <div class="due-remaining-box" id="dueRemainingBox" style="display:none">
+              <span>অবশিষ্ট বকেয়া:</span>
+              <strong id="dueRemainingDisplay">₹০.০০</strong>
+            </div>
+
+            <!-- Boundary Alert Warning Box -->
+            <div class="due-boundary-warning" id="dueBoundaryWarning" style="display:none">
+              <span>⚠️ আদায়ের পরিমাণ মোট বকেয়ার চেয়ে বেশি হতে পারে না!</span>
+            </div>
+
+            <hr class="form-divider">
+
+            <!-- Payment Method Selector -->
+            <div class="form-group">
+              <label class="form-label-bold">পেমেন্ট মাধ্যম</label>
+              <div class="due-method-pills">
+                <button type="button" class="due-method-pill active" id="dueMethod-Cash" onclick="setDueMethod('Cash')">💵 নগদ (Cash)</button>
+                <button type="button" class="due-method-pill" id="dueMethod-UPI" onclick="setDueMethod('UPI')">📱 ইউপিআই (UPI)</button>
+                <button type="button" class="due-method-pill" id="dueMethod-Mixed" onclick="setDueMethod('Mixed')">✨ মিশ্র (Mixed)</button>
+              </div>
+            </div>
+
+            <!-- Mixed Payment Sub-inputs -->
+            <div id="dueMixedInputs" class="due-mixed-grid" style="display:none">
+              <div class="form-group">
+                <label>নগদ টাকা (₹):</label>
+                <input type="text" id="dueMixedCash" class="form-input" placeholder="০" oninput="onDueMixedInput()">
+              </div>
+              <div class="form-group">
+                <label>ইউপিআই (₹):</label>
+                <input type="text" id="dueMixedUPI" class="form-input" placeholder="০" oninput="onDueMixedInput()">
+              </div>
+            </div>
+
+            <!-- Notes Textarea -->
+            <div class="form-group">
+              <label class="form-label">নোট বা রেফারেন্স (ঐচ্ছিক):</label>
+              <textarea id="dueNotesInput" class="form-input" rows="2" placeholder="লেনদেন সম্পর্কিত কোনো মন্তব্য লিখুন..."></textarea>
+            </div>
+
+            <!-- Submit Button -->
+            <button id="btnOpenDueConfirm" class="btn-due-submit" onclick="openDueConfirmModal()" disabled>
+              আদায় করুন
+            </button>
+          </div>
+        </div>
+
+        <!-- ── SUBVIEW 3: SUCCESS VIEW ── -->
+        <div id="due-view-success" class="due-subview" style="display:none">
+          <div class="due-success-card">
+            <div class="due-success-glow-ring">
+              <div class="due-success-icon">✓</div>
+            </div>
+            <h2 class="due-success-title">বকেয়া আদায় সফল হয়েছে!</h2>
+            <p class="due-success-customer" id="dueSuccessCustName">গ্রাহকের নাম</p>
+
+            <div class="due-success-summary">
+              <div class="due-summary-row green">
+                <span>আদায়কৃত পরিমাণ</span>
+                <strong id="dueSuccessCollected">₹০.০০</strong>
+              </div>
+              <div class="due-summary-row" id="dueSuccessRemainingRow">
+                <span>অবশিষ্ট বকেয়া</span>
+                <strong id="dueSuccessRemaining">₹০.০০</strong>
+              </div>
+            </div>
+
+            <div class="due-success-actions">
+              <button id="btnDueCollectMore" class="btn btn-outline btn-lg flex-1" onclick="collectMoreDue()" style="display:none">
+                ✨ আরও আদায় করুন
+              </button>
+              <button class="btn btn-primary btn-lg flex-1" onclick="doneDueCollection()">
+                ✓ সম্পন্ন
+              </button>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </section>
+
+    <!-- ── CONFIRMATION MODAL DIALOG ── -->
+    <div class="modal-backdrop" id="dueConfirmModal" style="display:none">
+      <div class="modal-card due-dialog-card">
+        <div class="due-dialog-header">
+          <div class="due-dialog-icon">⚠️</div>
+          <div>
+            <h3 class="due-dialog-title">বকেয়া আদায় নিশ্চিতকরণ</h3>
+            <p class="due-dialog-desc" id="dueConfirmDesc">আপনি কি নিশ্চিত যে এই টাকা আদায় করতে চান?</p>
+          </div>
+        </div>
+
+        <div class="due-dialog-table">
+          <div class="due-dialog-row">
+            <span class="dialog-lbl">গ্রাহকের নাম:</span>
+            <strong class="dialog-val" id="dialogCustName">—</strong>
+          </div>
+          <div class="due-dialog-row">
+            <span class="dialog-lbl">বর্তমান মোট বকেয়া:</span>
+            <strong class="dialog-val text-orange" id="dialogCurrentDue">—</strong>
+          </div>
+          <div class="due-dialog-row">
+            <span class="dialog-lbl">আদায়ের পরিমাণ:</span>
+            <strong class="dialog-val text-green text-lg" id="dialogCollectAmount">—</strong>
+          </div>
+          <div class="due-dialog-row">
+            <span class="dialog-lbl">পেমেন্ট মাধ্যম:</span>
+            <strong class="dialog-val" id="dialogPayMethod">—</strong>
+          </div>
+        </div>
+
+        <div class="modal-footer" style="padding:16px 20px">
+          <button class="btn btn-secondary" onclick="closeDueConfirmModal()">বাতিল</button>
+          <button class="btn btn-primary" id="btnConfirmDuePayment" onclick="executeDuePayment()" style="background:#16a34a">
+            ✅ আদায় নিশ্চিত করুন
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ════════════════════ VIEW: REPORTS ════════════════════ -->
+    <section class="app-view" id="view-reports">
+      <div class="view-content">
+        <div class="view-page-header">
+          <h2>📄 ব্যবসায়িক রিপোর্ট ও বিশ্লেষণ</h2>
+          <div style="display:flex;gap:8px">
+            <button class="btn btn-glass" onclick="window.location.href='/api/reports/export'">📥 CSV ডাউনলোড</button>
+            <button class="btn btn-glass" onclick="loadReports()">🔄 রিফ্রেশ</button>
+          </div>
+        </div>
+
+        <!-- Sub Report Navigation Tabs -->
+        <div class="report-sub-tabs">
+          <button class="report-sub-tab-btn active" onclick="switchReportTab('sales')">📊 বিক্রয় রিপোর্ট</button>
+          <button class="report-sub-tab-btn" onclick="switchReportTab('payment')">💳 পেমেন্ট রিপোর্ট</button>
+          <button class="report-sub-tab-btn" onclick="switchReportTab('stock')">📦 স্টক রিপোর্ট</button>
+          <button class="report-sub-tab-btn" onclick="switchReportTab('due')">₹ বকেয়া রিপোর্ট</button>
+          <button class="report-sub-tab-btn" onclick="switchReportTab('product')">🏷️ পণ্যভিত্তিক রিপোর্ট</button>
+          <button class="report-sub-tab-btn" onclick="switchReportTab('profit')">📈 লাভ-ক্ষতি রিপোর্ট</button>
+        </div>
+
+        <div class="dashboard-stats-grid" id="reportsKpiGrid">
+          <div class="dashboard-stat-card"><span class="stat-lbl">মোট বিক্রয়</span><strong class="stat-val" id="rep-sales" style="color:#10b981">₹০.০০</strong></div>
+          <div class="dashboard-stat-card"><span class="stat-lbl">মোট লাভ (COGS বাদে)</span><strong class="stat-val" id="rep-profit" style="color:#0284c7">₹০.০০</strong></div>
+          <div class="dashboard-stat-card"><span class="stat-lbl">সংগৃহীত কর (GST/VAT)</span><strong class="stat-val" id="rep-tax" style="color:#8b5cf6">₹০.০০</strong></div>
+          <div class="dashboard-stat-card"><span class="stat-lbl">মোট ইনভয়েস</span><strong class="stat-val" id="rep-invoices" style="color:#f59e0b">০</strong></div>
+        </div>
+
+        <div class="view-section-header">
+          <h3>📦 পণ্যভিত্তিক বিক্রয় রিপোর্ট (Top Selling Items)</h3>
+        </div>
+        <div class="data-table-wrapper">
+          <table class="data-table" id="topProductsReportTable">
+            <thead><tr>
+              <th>SKU</th><th>পণ্যের নাম</th><th>বিক্রিত সংখ্যা</th><th>মোট বিক্রয় (₹)</th><th>মোট লাভ (₹)</th>
+            </tr></thead>
+            <tbody id="topProductsReportTbody"><tr><td colspan="5" class="table-empty">লোড হচ্ছে...</td></tr></tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- ════════════════════ VIEW: TRANSACTIONS ════════════════════ -->
+    <section class="app-view" id="view-transactions">
+      <div class="view-content">
+        <div class="view-page-header">
+          <h2>🕒 লেনদেন (বিক্রয় ইতিহাস)</h2>
+          <div style="display:flex;gap:8px">
+            <button class="btn btn-glass" onclick="window.location.href='/api/reports/export'">📥 CSV ডাউনলোড</button>
+            <button class="btn btn-glass" onclick="loadTransactions()">🔄 রিফ্রেশ</button>
+          </div>
+        </div>
+        <div class="data-table-wrapper">
+          <table class="data-table" id="transactionsTable">
+            <thead><tr>
+              <th>ইনভয়েস নম্বর</th><th>গ্রাহক</th><th>ক্যাশিয়ার</th><th>তারিখ/সময়</th>
+              <th>সাবটোটাল</th><th>ছাড়</th><th>কর</th><th>মোট</th><th>লাভ</th><th>পেমেন্ট</th>
+            </tr></thead>
+            <tbody id="transactionsTbody"><tr><td colspan="10" class="table-empty">লোড হচ্ছে...</td></tr></tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- ════════════════════ VIEW: EXPENSES ════════════════════ -->
+    <section class="app-view" id="view-expenses">
+      <div class="view-content">
+        <div class="view-page-header">
+          <h2>💵 দৈনন্দিন খরচ (Expenses Management)</h2>
+          <button class="btn btn-primary" onclick="document.getElementById('addExpenseForm').style.display='block'">+ নতুন খরচ যোগ</button>
+        </div>
+
+        <!-- Add Expense Form -->
+        <div class="stock-adjust-form-panel" id="addExpenseForm" style="display:none">
+          <h4>➕ নতুন খরচ এন্ট্রি করুন</h4>
+          <div class="form-grid">
+            <div class="form-group">
+              <label>খরচের বিবরণ:</label>
+              <input type="text" id="expenseDescInput" class="form-input" placeholder="যেমন: দোকান বিদ্যুৎ বিল">
+            </div>
+            <div class="form-group">
+              <label>খরচের বিভাগ:</label>
+              <select id="expenseCatInput" class="form-input">
+                <option value="Utility">বিদ্যুৎ / পানি / গ্যাস</option>
+                <option value="Rent">দোকান ভাড়া</option>
+                <option value="Salary">কর্মচারী বেতন</option>
+                <option value="Supplies">প্যাকেজিং সামগ্রী</option>
+                <option value="Transport">পরিবহন ও ডেলিভারি</option>
+                <option value="Other">অন্যান্য বিবিধ খরচ</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label>পরিমাণ (₹):</label>
+              <input type="number" id="expenseAmountInput" class="form-input" placeholder="₹ পরিমাণ">
+            </div>
+            <div class="form-group">
+              <label>পরিশোধকারী:</label>
+              <input type="text" id="expensePaidByInput" class="form-input" value="Administrator">
+            </div>
+          </div>
+          <div style="display:flex;gap:8px;margin-top:12px">
+            <button class="btn btn-primary" onclick="addExpense()">✅ খরচ যোগ করুন</button>
+            <button class="btn btn-secondary" onclick="document.getElementById('addExpenseForm').style.display='none'">বাতিল</button>
+          </div>
+        </div>
+
+        <div class="dashboard-stats-grid">
+          <div class="dashboard-stat-card">
+            <span class="stat-lbl">মোট খরচ (চলতি মাস)</span>
+            <strong class="stat-val" id="exp-totalAmount" style="color:#ef4444">₹০.০০</strong>
+            <span class="stat-change">মোট এন্ট্রি: <span id="exp-count">০</span> টি</span>
+          </div>
+        </div>
+
+        <div class="data-table-wrapper">
+          <table class="data-table" id="expensesTable">
+            <thead><tr>
+              <th>তারিখ</th><th>বিবরণ</th><th>বিভাগ</th><th>পরিমাণ (₹)</th><th>পরিশোধকারী</th>
+            </tr></thead>
+            <tbody id="expensesTbody"><tr><td colspan="5" class="table-empty">লোড হচ্ছে...</td></tr></tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- ════════════════════ VIEW: SETTINGS ════════════════════ -->
+    <section class="app-view" id="view-settings">
+      <div class="view-content">
+        <div class="view-page-header">
+          <h2>⚙️ সিস্টেম ও দোকান সেটিংস</h2>
+        </div>
+
+        <div class="stock-adjust-form-panel">
+          <h4>🏪 দোকানের তথ্য ও রসিদ সেটিংস</h4>
+          <div class="form-grid">
+            <div class="form-group">
+              <label>দোকানের নাম (English):</label>
+              <input type="text" id="setStoreName" class="form-input" value="Lakhan Bhandar">
+            </div>
+            <div class="form-group">
+              <label>দোকানের নাম (বাংলা):</label>
+              <input type="text" id="setStoreNameBn" class="form-input" value="লক্ষণ ভাণ্ডার">
+            </div>
+            <div class="form-group">
+              <label>ঠিকানা:</label>
+              <input type="text" id="setStoreAddress" class="form-input" value="বাজার রোড, হোলসেল ও রিটেল মার্কেট">
+            </div>
+            <div class="form-group">
+              <label>মোবাইল / হেল্পলাইন:</label>
+              <input type="text" id="setStorePhone" class="form-input" value="01711-000000">
+            </div>
+            <div class="form-group">
+              <label>ভ্যাট / জিএসটি হার (%):</label>
+              <input type="number" id="setTaxRate" class="form-input" value="5">
+            </div>
+            <div class="form-group">
+              <label>মুদ্রা চিহ্ন:</label>
+              <input type="text" id="setCurrencySymbol" class="form-input" value="₹" readonly>
+            </div>
+          </div>
+          <div style="margin-top:16px">
+            <button class="btn btn-primary" onclick="saveSettings()">💾 সেটিংস সংরক্ষণ করুন</button>
+          </div>
+        </div>
+
+        <div class="stock-adjust-form-panel">
+          <h4>🖨️ ডিভাইস ও প্রিন্টার হার্ডওয়্যার টেস্ট</h4>
+          <div style="display:flex;gap:10px;margin-top:8px">
+            <button class="btn btn-glass" onclick="testPrinter()">🖨️ থার্মাল প্রিন্টার টেস্ট (ESC/POS)</button>
+            <button class="btn btn-glass" onclick="openCashDrawer()">💵 ক্যাশ ড্রয়ার খুলুন</button>
+            <button class="btn btn-glass" onclick="testBarcodeScanner()">📷 বারকোড স্ক্যানার টেস্ট</button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ════════════════════ VIEW: AUDIT LOGS ════════════════════ -->
+    <section class="app-view" id="view-audit">
+      <div class="view-content">
+        <div class="view-page-header">
+          <h2>📋 সিস্টেম অডিট লগ (Security & Action Logs)</h2>
+          <button class="btn btn-glass" onclick="loadAuditLog()">🔄 রিফ্রেশ</button>
+        </div>
+        <div class="data-table-wrapper">
+          <table class="data-table" id="auditTable">
+            <thead><tr>
+              <th>সময়</th><th>ব্যবহারকারী</th><th>অ্যাকশন</th><th>বিবরণ</th><th>আইপি / ডিভাইস</th>
+            </tr></thead>
+            <tbody id="auditTbody"><tr><td colspan="5" class="table-empty">লোড হচ্ছে...</td></tr></tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- ════════════════════ VIEW: PURCHASE ORDERS ════════════════════ -->
+    <section class="app-view" id="view-purchase-orders">
+      <div class="view-content">
+        <div class="view-page-header">
+          <h2>🚚 ক্রয় অর্ডার (Supplier Purchase Orders)</h2>
+          <button class="btn btn-primary" onclick="document.getElementById('addPOForm').style.display='block'">+ নতুন ক্রয় অর্ডার</button>
+        </div>
+
+        <!-- Add PO Form -->
+        <div class="stock-adjust-form-panel" id="addPOForm" style="display:none">
+          <h4>📋 নতুন ক্রয় অর্ডার তৈরি করুন</h4>
+          <div class="form-grid">
+            <div class="form-group">
+              <label>সরবরাহকারী:</label>
+              <select id="poSupplierSelect" class="form-input"></select>
+            </div>
+            <div class="form-group">
+              <label>মোট পরিমাণ (₹):</label>
+              <input type="number" id="poTotalInput" class="form-input" placeholder="₹ পরিমাণ">
+            </div>
+            <div class="form-group" style="grid-column:1/-1">
+              <label>নোট / বিবরণ:</label>
+              <input type="text" id="poNotesInput" class="form-input" placeholder="পণ্যের বিবরণ">
+            </div>
+          </div>
+          <div style="display:flex;gap:8px;margin-top:12px">
+            <button class="btn btn-primary" onclick="addPurchaseOrder()">✅ অর্ডার তৈরি করুন</button>
+            <button class="btn btn-secondary" onclick="document.getElementById('addPOForm').style.display='none'">বাতিল</button>
+          </div>
+        </div>
+
+        <div class="data-table-wrapper">
+          <table class="data-table" id="purchaseOrdersTable">
+            <thead><tr>
+              <th>অর্ডার ID</th><th>সরবরাহকারী</th><th>পণ্য সংখ্যা</th><th>মোট মূল্য</th><th>নোট</th><th>তারিখ</th><th>স্থিতি</th>
+            </tr></thead>
+            <tbody id="purchaseOrdersTbody"><tr><td colspan="7" class="table-empty">লোড হচ্ছে...</td></tr></tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+  </div>
+
+  <!-- ════════════════════ 3. MODALS ════════════════════ -->
+
+  <!-- CHECKOUT MODAL -->
+  <div id="checkoutModal" class="modal-backdrop">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h3>💳 বিক্রয় সম্পন্ন ও পেমেন্ট গ্রহণ</h3>
+        <button class="btn-close" data-alap-action="close-modal">✕</button>
+      </div>
+      <div class="modal-body">
+        <div class="checkout-grand-badge">
+          <span>মোট প্রদেয় বিল:</span>
+          <strong id="checkoutTotalBadge">₹০.০০</strong>
+        </div>
+        <div class="quick-cash-row">
+          <span class="quick-lbl">দ্রুত নগদ:</span>
+          <button class="btn-quick-cash" data-amount="exact">যথাযথ বিল</button>
+          <button class="btn-quick-cash" data-amount="5000">₹৫০</button>
+          <button class="btn-quick-cash" data-amount="10000">₹১০০</button>
+          <button class="btn-quick-cash" data-amount="20000">₹২০০</button>
+          <button class="btn-quick-cash" data-amount="50000">₹৫০০</button>
+        </div>
+        <div class="split-pay-grid">
+          <div class="pay-row"><label>💵 নগদ (Cash):</label><input type="number" id="payCashInput" class="input-pay" value="0" min="0"></div>
+          <div class="pay-row"><label>📱 ইউপিআই (UPI):</label><input type="number" id="payMFSInput" class="input-pay" value="0" min="0"></div>
+          <div class="pay-row"><label>💳 কার্ড (Card):</label><input type="number" id="payCardInput" class="input-pay" value="0" min="0"></div>
+          <div class="pay-row"><label style="color:#d97706">⏱️ বাকি (Due):</label><input type="number" id="payDueInput" class="input-pay" value="0" min="0"></div>
+        </div>
+        <div class="change-return-box">
+          <span>ফেরত (Change):</span>
+          <strong id="changeReturnDisplay" class="change-val positive">₹০.০০</strong>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" data-alap-action="close-modal">বাতিল</button>
+        <button class="btn btn-primary" id="btnConfirmCheckout" data-alap-action="confirm-checkout">✅ নিশ্চিত করুন ও রসিদ দিন</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- RECEIPT MODAL -->
+  <div id="receiptModal" class="modal-backdrop">
+    <div class="modal-card" style="max-width:420px">
+      <div class="modal-header">
+        <h3>🧾 বিক্রয় রসিদ (Thermal 58mm)</h3>
+        <button class="btn-close" data-alap-action="close-modal">✕</button>
+      </div>
+      <div class="modal-body">
+        <div class="thermal-receipt-paper" id="receiptPaper"></div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" data-alap-action="close-modal">বন্ধ করুন</button>
+        <button class="btn btn-primary" data-alap-action="print-receipt">🖨️ প্রিন্ট করুন</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- TOAST NOTIFICATION CONTAINER -->
+  <div id="toast-container"></div>
+  <div id="alapToast" class="alap-toast"></div>
+
+  <script src="/alap-runtime.js"></script>
+</body>
+</html>

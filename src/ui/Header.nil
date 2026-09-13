@@ -1,0 +1,111 @@
+// src/ui/Header.nil - POS Application Header Component (NilLang Alap)
+import { Row, Column, Text, Button, Spacer } from "alap/ui";
+
+component Header {
+    prop storeName: string = "লাখান ভাণ্ডার পাইকারি ও খুচরা বিক্রয় কেন্দ্র";
+    prop terminalId: string = "টার্মিনাল #০১";
+    prop shiftNo: string = "শিফট #০১";
+    @State cashierName: string = "জয় সরকার";
+    @State isOnline: bool = true;
+
+    build() {
+        Row {
+            // Brand zone
+            Row {
+                Text("🏪")
+                    .fontSize(28)
+                    .margin({ right: 12 })
+
+                Column {
+                    Row {
+                        Text(storeName)
+                            .fontSize(18)
+                            .fontWeight("bold")
+                            .color("#f8fafc")
+                        
+                        Text("Alap Native Engine")
+                            .fontSize(11)
+                            .fontWeight("600")
+                            .padding({ horizontal: 8, vertical: 2 })
+                            .borderRadius(12)
+                            .backgroundColor("rgba(0, 212, 255, 0.15)")
+                            .color("#00d4ff")
+                            .margin({ left: 10 })
+                    }
+
+                    Text(terminalId + " • " + shiftNo + " • দ্রুত বিক্রয় সিস্টেম")
+                        .fontSize(12)
+                        .color("#94a3b8")
+                        .margin({ top: 2 })
+                }
+            }
+            .alignItems("center")
+
+            Spacer()
+
+            // Terminal status & clock
+            Row {
+                Column {
+                    Text("⏰")
+                        .fontSize(16)
+                    Text("--:--:--")
+                        .id("clockDisplay")
+                        .fontSize(16)
+                        .fontFamily("JetBrains Mono, monospace")
+                        .fontWeight("600")
+                        .color("#00d4ff")
+                }
+                .alignItems("center")
+                .margin({ right: 24 })
+
+                Row {
+                    Text("●")
+                        .fontSize(10)
+                        .color(isOnline ? "#10b981" : "#ef4444")
+                        .margin({ right: 6 })
+                    
+                    Text("ক্যাশিয়ার: " + cashierName)
+                        .fontSize(13)
+                        .fontWeight("600")
+                        .color("#e2e8f0")
+                }
+                .padding({ horizontal: 12, vertical: 6 })
+                .borderRadius(20)
+                .backgroundColor("#1e293b")
+                .margin({ right: 20 })
+            }
+            .alignItems("center")
+
+            // Top action buttons
+            Row {
+                Button("📊 দৈনিক রিপোর্ট") {
+                    onClick => {
+                        this.emit("openDailyReport")
+                    }
+                }
+                .variant("glass")
+                .margin({ right: 8 })
+
+                Button("📦 স্টক ব্যবস্থাপনা") {
+                    onClick => {
+                        this.emit("openStockAdjust")
+                    }
+                }
+                .variant("glass")
+                .margin({ right: 8 })
+
+                Button("🔄") {
+                    onClick => {
+                        this.emit("refreshCatalog")
+                    }
+                }
+                .variant("glass-icon")
+            }
+            .alignItems("center")
+        }
+        .padding({ horizontal: 20, vertical: 12 })
+        .backgroundColor("#0f172a")
+        .border({ bottom: 1, color: "rgba(255,255,255,0.08)" })
+        .width("100%")
+    }
+}

@@ -1,0 +1,55 @@
+// src/domain/checkout.nil - Atomic Transaction Orchestration
+
+let processCheckout = fn(cmd) {
+    // cmd: { cart, payment: { cashMinor, upiMinor, prepaidMinor, dueMinor }, customerId, cashierId }
+    let cart = cmd["cart"];
+    let pay = cmd["payment"];
+
+    // 1. Calculate Grand Total
+    let items = cart["items"];
+    if (len(items) == 0) {
+        return { "ok": false, "err": "EMPTY_CART" };
+    }
+
+    let subtotalMinor = 0;
+    let i = 0;
+    while (i < len(items)) {
+        subtotalMinor = subtotalMinor + items[i]["lineTotalMinor"];
+        i = i + 1;
+    }
+
+    let disc = cart["discountMinor"];
+    let afterDisc = subtotalMinor - disc;
+    if (afterDisc < 0) { afterDisc = 0; }
+    let tax = (afterDisc * 5) / 100;
+    let grandMinor = afterDisc + tax;
+
+    // 2. Validate Payment Breakdown
+    let totalPaidMinor = pay["cashMinor"] + pay["upiMinor"] + pay["prepaidMinor"] + pay["dueMinor"];
+    if (totalPaidMinor < grandMinor) {
+        return {
+            "ok": false,
+            "err": "UNDERPAID",
+            "required": grandMinor,
+            "received": totalPaidMinor
+        };
+    }
+
+    // 3. Change calculation
+    let changeMinor = totalPaidMinor - grandMinor;
+
+    let saleId = "SALE-" + str(time());
+    let invoiceNo = "INV-" + str(time() % 1000000);
+
+    return {
+        "ok": true,
+        "saleId": saleId,
+        "invoiceNo": invoiceNo,
+        "customerId": cart["customerId"],
+        "grandMinor": grandMinor,
+        "payment": pay,
+        "changeMinor": changeMinor,
+        "items": items,
+        "timestamp": time()
+    };
+};

@@ -1,0 +1,91 @@
+// src/domain/cart.nil - Multi-tab POS Cart Logic
+
+let createCart = fn(tabId) {
+    return {
+        "tabId": tabId,
+        "items": [],
+        "discountMinor": 0,
+        "taxMinor": 0,
+        "customerId": "walk-in",
+        "customerName": "Walk-in Customer / সাধারণ ক্রেতা"
+    };
+};
+
+let addLine = fn(cart, product, qty) {
+    if (product["stock"] <= 0) {
+        return { "ok": false, "err": "OUT_OF_STOCK" };
+    }
+    if (qty <= 0) {
+        return { "ok": false, "err": "INVALID_QUANTITY" };
+    }
+
+    let line = {
+        "productId": product["id"],
+        "name": product["name"],
+        "sku": product["sku"],
+        "unitPriceMinor": product["priceMinor"],
+        "costAtSaleMinor": product["wacMinor"],
+        "qty": qty,
+        "lineTotalMinor": product["priceMinor"] * qty
+    };
+
+    let items = cart["items"];
+    // Check if item already exists in cart, update qty
+    let found = false;
+    let newItems = [];
+    let i = 0;
+    while (i < len(items)) {
+        let it = items[i];
+        if (it["productId"] == product["id"]) {
+            let updatedQty = it["qty"] + qty;
+            let updatedLine = {
+                "productId": it["productId"],
+                "name": it["name"],
+                "sku": it["sku"],
+                "unitPriceMinor": it["unitPriceMinor"],
+                "costAtSaleMinor": it["costAtSaleMinor"],
+                "qty": updatedQty,
+                "lineTotalMinor": it["unitPriceMinor"] * updatedQty
+            };
+            newItems = append(newItems, updatedLine);
+            found = true;
+        } else {
+            newItems = append(newItems, it);
+        }
+        i = i + 1;
+    }
+
+    if (found == false) {
+        newItems = append(newItems, line);
+    }
+
+    cart["items"] = newItems;
+    return { "ok": true, "cart": cart };
+};
+
+let calculateTotals = fn(cart) {
+    let items = cart["items"];
+    let subtotalMinor = 0;
+    let i = 0;
+    while (i < len(items)) {
+        subtotalMinor = subtotalMinor + items[i]["lineTotalMinor"];
+        i = i + 1;
+    }
+
+    let disc = cart["discountMinor"];
+    let afterDisc = subtotalMinor - disc;
+    if (afterDisc < 0) {
+        afterDisc = 0;
+    }
+
+    // 5% Tax calculation (integer arithmetic)
+    let tax = (afterDisc * 5) / 100;
+    let grand = afterDisc + tax;
+
+    return {
+        "subtotalMinor": subtotalMinor,
+        "discountMinor": disc,
+        "taxMinor": tax,
+        "grandMinor": grand
+    };
+};

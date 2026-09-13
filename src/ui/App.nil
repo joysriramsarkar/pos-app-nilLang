@@ -1,0 +1,104 @@
+// src/ui/App.nil - Root Declarative Component for NilLang POS Application
+import { Column, Row } from "alap/ui";
+import "./Header.nil" as Header;
+import "./CatalogPane.nil" as CatalogPane;
+import "./CartPane.nil" as CartPane;
+import "./Modals.nil" as Modals;
+
+@Entry
+@Component
+component POSApp {
+    @State activeTab: string = "tab-1";
+    @State searchQuery: string = "";
+    @State selectedCategory: string = "all";
+    @State isCheckoutModalOpen: bool = false;
+    @State isDailyReportOpen: bool = false;
+    @State isStockModalOpen: bool = false;
+    @State isCustomerModalOpen: bool = false;
+    @State isShiftModalOpen: bool = false;
+    @State isSyncModalOpen: bool = false;
+
+    build() {
+        Column {
+            // 1. POS Top Navigation & Status Bar
+            Header {
+                onOpenDailyReport => { isDailyReportOpen = true; }
+                onOpenStockAdjust => { isStockModalOpen = true; }
+                onOpenCustomers => { isCustomerModalOpen = true; }
+                onOpenShift => { isShiftModalOpen = true; }
+                onOpenSync => { isSyncModalOpen = true; }
+                onRefreshCatalog => { this.fetchCatalog(); }
+            }
+
+            // 2. Main POS Workspace: Catalog Pane (Left) + Cart Pane (Right)
+            Row {
+                CatalogPane {
+                    searchQuery: searchQuery,
+                    selectedCategory: selectedCategory,
+                    onAddToCart => (product) {
+                        this.addToCart(product);
+                    },
+                    onSearchChange => (q) {
+                        searchQuery = q;
+                    },
+                    onFilterCategory => (cat) {
+                        selectedCategory = cat;
+                    }
+                }
+
+                CartPane {
+                    activeTab: activeTab,
+                    onSwitchTab => (tabId) {
+                        activeTab = tabId;
+                    },
+                    onOpenCheckout => {
+                        isCheckoutModalOpen = true;
+                    }
+                }
+            }
+            .grow()
+
+            // 3. Declarative Modals
+            Modals.CheckoutModal {
+                isOpen: isCheckoutModalOpen,
+                onClose => { isCheckoutModalOpen = false; }
+            }
+
+            Modals.DailyReportModal {
+                isOpen: isDailyReportOpen,
+                onClose => { isDailyReportOpen = false; }
+            }
+
+            Modals.StockModal {
+                isOpen: isStockModalOpen,
+                onClose => { isStockModalOpen = false; }
+            }
+
+            Modals.CustomerModal {
+                isOpen: isCustomerModalOpen,
+                onClose => { isCustomerModalOpen = false; }
+            }
+
+            Modals.ShiftModal {
+                isOpen: isShiftModalOpen,
+                onClose => { isShiftModalOpen = false; }
+            }
+
+            Modals.SyncModal {
+                isOpen: isSyncModalOpen,
+                onClose => { isSyncModalOpen = false; }
+            }
+        }
+        .width("100%")
+        .height("100vh")
+        .backgroundColor("#0a0a0f")
+    }
+
+    func addToCart(product: any) {
+        puts("🛒 [Alap UI] Adding item to cart: " + product.name);
+    }
+
+    func fetchCatalog() {
+        puts("🔄 [Alap UI] Refreshing catalog...");
+    }
+}
