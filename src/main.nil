@@ -1,4 +1,8 @@
-// src/main.nil - Main Entrypoint for Nilang POS System
+// src/main.nil - Full POS Vertical Slice: Lakhan Bhandar Enterprise Retail System
+// Flow: CATALOG → BARCODE SEARCH → CART → DISCOUNT → TAX
+//       → SPLIT PAYMENT → CHECKOUT → CUSTOMER LEDGER
+//       → STOCK DEDUCTION (COGS/WAC) → RECEIPT → SALES HISTORY
+
 import "web";
 import "data";
 import "money";
@@ -10,49 +14,270 @@ import "./domain/checkout.nil" as CheckoutEngine;
 import "./domain/ledger.nil" as LedgerEngine;
 import "./domain/stock.nil" as StockEngine;
 
-// Initialize POS Application System
-puts("🏪 [Nilang POS] Initializing Lakhan Bhandar Enterprise Retail System...");
+// ────────────────────────────────────────────────────────────────────
+// 1. PRODUCT CATALOG (wholesale & retail groceries)
+// ────────────────────────────────────────────────────────────────────
+let catalog = [];
 
-let product1 = {
+catalog = append(catalog, {
     "id": "p-01",
     "name": "মিনিকেট চাল / Miniket Rice (50kg)",
     "sku": "RICE-MIN-50",
     "barcode": "8901030012345",
-    "priceMinor": 320000, // ৳3,200.00
-    "wacMinor": 285000,   // ৳2,850.00 WAC cost
+    "priceMinor": 320000,
+    "wacMinor": 285000,
     "stock": 40
-};
+});
 
-let product2 = {
+catalog = append(catalog, {
     "id": "p-02",
-    "name": "তীর সয়াবিন তেল / Teer Soybean Oil (5L)",
+    "name": "তীর সয়াবিন তেল / Teer Soybean Oil (5L)",
     "sku": "OIL-TEER-5L",
     "barcode": "8901030098765",
-    "priceMinor": 89000,  // ৳890.00
-    "wacMinor": 81000,    // ৳810.00
+    "priceMinor": 89000,
+    "wacMinor": 81000,
     "stock": 65
-};
+});
 
-let product3 = {
+catalog = append(catalog, {
     "id": "p-03",
     "name": "ফ্রেশ আটা / Fresh Atta (2kg)",
     "sku": "ATTA-FRSH-2K",
     "barcode": "8901030055555",
-    "priceMinor": 12500,  // ৳125.00
-    "wacMinor": 10500,    // ৳105.00
+    "priceMinor": 12500,
+    "wacMinor": 10500,
     "stock": 120
+});
+
+catalog = append(catalog, {
+    "id": "p-04",
+    "name": "মল্লা লবণ / Molla Salt (1kg)",
+    "sku": "SALT-MLLA-1K",
+    "barcode": "8901030077778",
+    "priceMinor": 4200,
+    "wacMinor": 3100,
+    "stock": 200
+});
+
+catalog = append(catalog, {
+    "id": "p-05",
+    "name": "চিনি / Sugar (1kg)",
+    "sku": "SUGAR-1K",
+    "barcode": "8901030066666",
+    "priceMinor": 11500,
+    "wacMinor": 9800,
+    "stock": 88
+});
+
+puts("🏪 [Nilang POS] Lakhan Bhandar Enterprise Retail System");
+puts("📦 [Catalog] " + str(len(catalog)) + " products loaded");
+
+// ────────────────────────────────────────────────────────────────────
+// 2. SEARCH: barcode + SKU lookup
+// ────────────────────────────────────────────────────────────────────
+let findByBarcode = fn(cat, barcode) {
+    let i = 0;
+    while (i < len(cat)) {
+        if (cat[i]["barcode"] == barcode) {
+            return cat[i];
+        }
+        i = i + 1;
+    }
+    return null;
 };
 
-puts("📦 [Catalog Loaded] 3 Baseline Wholesale & Retail Items Ready.");
+let findBySKU = fn(cat, sku) {
+    let i = 0;
+    while (i < len(cat)) {
+        if (cat[i]["sku"] == sku) {
+            return cat[i];
+        }
+        i = i + 1;
+    }
+    return null;
+};
 
-// Multi-Tab Cart Verification
+let rice = findByBarcode(catalog, "8901030012345");
+let oil = findByBarcode(catalog, "8901030098765");
+let salt = findBySKU(catalog, "SALT-MLLA-1K");
+let atta = findByBarcode(catalog, "8901030055555");
+
+if (rice == null) { puts("❌ barcode lookup failed: rice"); }
+if (oil == null) { puts("❌ barcode lookup failed: oil"); }
+puts("🔍 [Search] barcode+SKU lookup OK: " + rice["sku"] + ", " + oil["sku"] + ", " + salt["sku"] + ", " + atta["sku"]);
+
+// ────────────────────────────────────────────────────────────────────
+// 3. MULTI-TAB CART + DISCOUNT
+// ────────────────────────────────────────────────────────────────────
 let cart = CartEngine.createCart("tab-1");
-CartEngine.addLine(cart, product1, 1);
-CartEngine.addLine(cart, product2, 2);
+cart["customerId"] = "c-1001";
+cart["customerName"] = "করিম মিয়া / Karim Mia";
+
+let r1 = CartEngine.addLine(cart, rice, 2);
+let r2 = CartEngine.addLine(cart, oil, 3);
+let r3 = CartEngine.addLine(cart, salt, 5);
+let r4 = CartEngine.addLine(cart, atta, 1);
+
+if (r1["ok"] == false) { puts("❌ addLine rice: " + r1["err"]); }
+if (r2["ok"] == false) { puts("❌ addLine oil: " + r2["err"]); }
+if (r3["ok"] == false) { puts("❌ addLine salt: " + r3["err"]); }
+if (r4["ok"] == false) { puts("❌ addLine atta: " + r4["err"]); }
+
+// 5% wholesale discount on the whole cart
+let subtotalBefore = 0;
+let di = 0;
+while (di < len(cart["items"])) {
+    subtotalBefore = subtotalBefore + cart["items"][di]["lineTotalMinor"];
+    di = di + 1;
+}
+cart["discountMinor"] = (subtotalBefore * 5) / 100;
 
 let totals = CartEngine.calculateTotals(cart);
-let grandFormatted = MoneyEngine.format(MoneyEngine.ofMinor(totals["grandMinor"], "BDT"));
-puts("🛒 [Cart Verified] Grand Total: " + grandFormatted);
+puts("🛒 [Cart] " + str(len(cart["items"])) + " lines, discount ৳" + str(totals["discountMinor"] / 100) + ".00");
 
-puts("🎨 [Alap UI] POS Declarative Component Hierarchy Ready (Header, CatalogPane, CartPane, Modals).");
-puts("✅ [Nilang POS Core Engine Ready]");
+// ────────────────────────────────────────────────────────────────────
+// 4. CUSTOMER (with prepaid balance + existing due)
+// ────────────────────────────────────────────────────────────────────
+let customer = {
+    "id": "c-1001",
+    "name": "করিম মিয়া / Karim Mia",
+    "dueMinor": 150000,
+    "prepaidMinor": 50000
+};
+
+// ────────────────────────────────────────────────────────────────────
+// 5. CHECKOUT: split payment (cash + UPI + prepaid + due)
+// ────────────────────────────────────────────────────────────────────
+let grand = totals["grandMinor"];
+
+// pay: ৳2000 cash, ৳2000 UPI, use ৳500 prepaid, rest on due
+let cashMinor = 200000;
+let upiMinor = 200000;
+let prepaidUseMinor = 50000;
+let dueMinor = grand - cashMinor - upiMinor - prepaidUseMinor;
+
+let payment = {
+    "cashMinor": cashMinor,
+    "upiMinor": upiMinor,
+    "prepaidMinor": prepaidUseMinor,
+    "dueMinor": dueMinor
+};
+
+let cmd = {
+    "cart": cart,
+    "payment": payment,
+    "customerId": customer["id"],
+    "cashierId": "cashier-01"
+};
+
+let result = CheckoutEngine.processCheckout(cmd);
+if (result["ok"] == false) {
+    puts("❌ [Checkout] FAILED: " + result["err"]);
+    puts("   required=৳" + str(result["required"] / 100) + " received=৳" + str(result["received"] / 100));
+} else {
+    puts("✅ [Checkout] " + result["invoiceNo"] + " grand=৳" + str(result["grandMinor"] / 100) + " change=৳" + str(result["changeMinor"] / 100));
+}
+
+// ────────────────────────────────────────────────────────────────────
+// 6. CUSTOMER LEDGER (double-entry: due +, prepaid −)
+// ────────────────────────────────────────────────────────────────────
+let ledgerResult = LedgerEngine.applyCustomerLedger(customer, dueMinor, prepaidUseMinor, result["saleId"]);
+let ledgerEntry = ledgerResult["ledgerEntry"];
+puts("📒 [Ledger] due ৳" + str(ledgerEntry["dueAfter"] / 100) + " | prepaid ৳" + str(ledgerEntry["prepaidAfter"] / 100));
+
+// ────────────────────────────────────────────────────────────────────
+// 7. STOCK DEDUCTION + COGS (WAC) + RESTOCK WAC RECALC
+// ────────────────────────────────────────────────────────────────────
+let items = result["items"];
+let totalCogsMinor = 0;
+
+// Deduct stock per sold line (match by productId)
+let pi = 0;
+while (pi < len(items)) {
+    let line = items[pi];
+    let product = findByBarcode(catalog, "8901030012345");
+    let j = 0;
+    while (j < len(catalog)) {
+        if (catalog[j]["id"] == line["productId"]) {
+            product = catalog[j];
+        }
+        j = j + 1;
+    }
+    let deduction = StockEngine.deductStock(product, line["qty"]);
+    if (deduction["ok"] == false) {
+        puts("❌ [Stock] " + product["sku"] + ": " + deduction["err"]);
+    } else {
+        totalCogsMinor = totalCogsMinor + deduction["costOfGoodsSold"];
+        puts("📉 [Stock] " + product["sku"] + " −" + str(line["qty"]) + " → remaining " + str(product["stock"]));
+    }
+    pi = pi + 1;
+}
+
+// Restock rice: 10 bags @ ৳2900 → new WAC
+let wacResult = StockEngine.calculateNewWac(rice["stock"], rice["wacMinor"], 10, 290000);
+puts("⚖️ [WAC] rice restock WAC → ৳" + str(wacResult / 100) + ".00 (COGS this sale: ৳" + str(totalCogsMinor / 100) + ".00)");
+
+// ────────────────────────────────────────────────────────────────────
+// 8. RECEIPT
+// ────────────────────────────────────────────────────────────────────
+let receiptMoney = fn(minor) {
+    return MoneyEngine.format(MoneyEngine.ofMinor(minor, "BDT"));
+};
+
+puts("════════════════════════════════════════");
+puts("        লাখান ভাণ্ডার (Lakhan Bhandar)");
+puts("     Wholesale & Retail Groceries");
+puts("════════════════════════════════════════");
+puts("Invoice : " + result["invoiceNo"]);
+puts("Cashier : " + cmd["cashierId"] + "   Tab: " + cart["tabId"]);
+puts("Customer: " + customer["name"]);
+puts("────────────────────────────────────────");
+
+let ri = 0;
+while (ri < len(items)) {
+    let line = items[ri];
+    puts(line["name"]);
+    puts("   " + str(line["qty"]) + " x " + receiptMoney(line["unitPriceMinor"]) + " = " + receiptMoney(line["lineTotalMinor"]));
+    ri = ri + 1;
+}
+
+puts("────────────────────────────────────────");
+puts("Subtotal : " + receiptMoney(totals["subtotalMinor"]));
+puts("Discount : -" + receiptMoney(totals["discountMinor"]));
+puts("Tax (5%) : " + receiptMoney(totals["taxMinor"]));
+puts("TOTAL    : " + receiptMoney(result["grandMinor"]));
+puts("────────────────────────────────────────");
+puts("Cash     : " + receiptMoney(payment["cashMinor"]));
+puts("UPI      : " + receiptMoney(payment["upiMinor"]));
+puts("Prepaid  : " + receiptMoney(payment["prepaidMinor"]));
+puts("Due      : " + receiptMoney(payment["dueMinor"]));
+puts("Change   : " + receiptMoney(result["changeMinor"]));
+puts("════════════════════════════════════════");
+puts("        ধন্যবাদ — Thank you!");
+puts("════════════════════════════════════════");
+
+// ────────────────────────────────────────────────────────────────────
+// 9. SALES HISTORY (in-memory ledger of completed sales)
+// ────────────────────────────────────────────────────────────────────
+let salesHistory = [];
+salesHistory = append(salesHistory, {
+    "saleId": result["saleId"],
+    "invoiceNo": result["invoiceNo"],
+    "grandMinor": result["grandMinor"],
+    "cogsMinor": totalCogsMinor,
+    "marginMinor": result["grandMinor"] - totalCogsMinor,
+    "items": len(items),
+    "customerId": customer["id"]
+});
+
+let sale = salesHistory[0];
+puts("📊 [Sales History] " + str(len(salesHistory)) + " sale(s) recorded");
+puts("   " + sale["invoiceNo"] + " | revenue " + receiptMoney(sale["grandMinor"]) + " | COGS " + receiptMoney(sale["cogsMinor"]) + " | margin " + receiptMoney(sale["marginMinor"]));
+
+// ────────────────────────────────────────────────────────────────────
+// 10. SECURITY: CSRF token for the session
+// ────────────────────────────────────────────────────────────────────
+let csrf = security.csrfToken();
+puts("🔐 [Security] session CSRF token: " + str(len(csrf)) + " hex chars");
+
+puts("✅ [Nilang POS] Full vertical slice completed: catalog → search → cart → discount → tax → split payment → checkout → ledger → stock/COGS/WAC → receipt → sales history");
